@@ -22,83 +22,118 @@ import { BookingModal } from '../../components/ui/BookingModal';
 export const DoctorDetails = () => {
   const { selectedDoctor, setSelectedDoctor, doctors, setActiveView, setBookingDoctor, bookingDoctor } = useApp();
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [imgError, setImgError] = useState(false);
 
   const doc = selectedDoctor || doctors[0];
 
   if (!doc) {
     return (
       <div className="text-center py-20">
-        <p className="text-slate-400">No doctor selected.</p>
-        <button onClick={() => setActiveView('doctors')} className="mt-4 text-cyan-400 underline">Back to Doctors Directory</button>
+        <p className="text-slate-500 font-bold text-sm">No doctor selected.</p>
+        <button onClick={() => setActiveView('doctors')} className="mt-4 text-brand-600 font-bold underline text-xs">Back to Doctors Directory</button>
       </div>
     );
   }
 
+  // Extract clean initials for image fallback
+  const initials = doc.name
+    ? doc.name.replace(/^Dr\.\s*/i, '').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+    : 'DR';
+
   const similarDoctors = doctors.filter(d => d.id !== doc.id && d.specialization === doc.specialization);
 
+  const expYears = typeof doc.experience === 'number' ? doc.experience : parseInt(doc.experience || '10', 10);
+  const experienceText = `${expYears || 10} Years Experience`;
+
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
       
-      {/* Top Navigation Back Button */}
-      <div className="flex items-center justify-between">
+      {/* Top Navigation Back Button & Verified Badge */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <button
           onClick={() => setActiveView('doctors')}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl transition-all hover:bg-slate-800"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-brand-700 bg-white hover:bg-slate-50 border border-slate-200/90 px-4 py-2 rounded-xl transition-all shadow-2xs"
         >
-          <ArrowLeft className="w-4 h-4 text-cyan-400" />
+          <ArrowLeft className="w-4 h-4 text-brand-600" />
           <span>Back to Doctors Directory</span>
         </button>
 
-        <span className="text-xs text-slate-400 flex items-center gap-1 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-white/5">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+        <span className="text-xs font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200/90 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xs">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>Verified Specialist Profile • ABDM ABHA Integrated</span>
         </span>
       </div>
 
-      {/* Main Profile Header Card */}
-      <div className="glass-card p-6 sm:p-8 border-slate-800 relative overflow-hidden bg-slate-900/90 shadow-2xl">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+      {/* 1. MAIN DOCTOR PROFILE HEADER CARD */}
+      <div className="glass-card p-6 sm:p-8 bg-white border border-slate-200/90 rounded-[22px] shadow-sm relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
           
           {/* Doctor Info */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            <img
-              src={doc.photo}
-              alt={doc.name}
-              className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl object-cover border-4 border-cyan-500/30 glow-cyan shrink-0"
-            />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 flex-1 min-w-0">
+            
+            {/* 128x128 Profile Photo with Fallback */}
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border border-slate-200 shrink-0 shadow-xs bg-slate-100 flex items-center justify-center">
+              {!imgError && doc.photo ? (
+                <img
+                  src={doc.photo}
+                  alt={doc.name}
+                  onError={() => setImgError(true)}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-tr from-slate-100 via-sky-50 to-cyan-100 flex flex-col items-center justify-center text-brand-700">
+                  <Stethoscope className="w-8 h-8 text-brand-600 mb-1" />
+                  <span className="text-sm font-black tracking-wider text-slate-800">{initials}</span>
+                </div>
+              )}
+            </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-cyan-300 bg-cyan-500/10 px-3 py-0.5 rounded-full border border-cyan-500/30">
+                <span className="text-xs font-bold uppercase tracking-wider text-teal-800 bg-teal-50 px-3 py-0.5 rounded-full border border-teal-200/80">
                   {doc.specialization}
                 </span>
-                <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Available Today
+                <span className="text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Available Today
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white">{doc.name}</h1>
-              <p className="text-xs text-slate-300 font-medium">{doc.education}</p>
+              {/* DOCTOR NAME — MOST PROMINENT TEXT */}
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                {doc.name}
+              </h1>
 
-              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-1">
-                <span className="flex items-center gap-1.5"><Award className="w-4 h-4 text-cyan-400" /> {doc.experience} Experience</span>
-                <span className="flex items-center gap-1.5 text-amber-400 font-bold"><Star className="w-4 h-4 fill-amber-400" /> {doc.rating} ({doc.reviewsCount} Verified Reviews)</span>
-                <span className="flex items-center gap-1.5"><Building2 className="w-4 h-4 text-brand-400" /> {doc.hospitalName}</span>
+              <p className="text-xs sm:text-sm font-semibold text-slate-600">
+                {doc.education || 'MBBS, MD, DM (Specialist)'}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-700 pt-1 font-semibold">
+                <span className="flex items-center gap-1.5 text-slate-800 font-bold">
+                  <Award className="w-4 h-4 text-brand-600" /> {experienceText}
+                </span>
+                <span className="flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-lg text-amber-800 font-extrabold">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {doc.rating || '4.90'} ({doc.reviewsCount || 130} Verified Reviews)
+                </span>
+                <span className="flex items-center gap-1.5 text-slate-800 font-extrabold">
+                  <Building2 className="w-4 h-4 text-cyan-600" /> {doc.hospitalName}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Quick Fee & Action Box */}
-          <div className="w-full md:w-auto bg-slate-950/80 border border-slate-800 p-5 rounded-2xl text-center space-y-3 shrink-0">
+          <div className="w-full lg:w-72 bg-slate-50/90 border border-slate-200/90 p-5 rounded-2xl text-center space-y-3 shrink-0 shadow-2xs">
             <div>
-              <span className="text-xs text-slate-400 font-medium">Consultation Fee</span>
-              <p className="text-3xl font-black text-white">₹{doc.consultationFee}</p>
-              <span className="text-[10px] text-emerald-400 font-semibold">Includes OPD Token & Prescription</span>
+              <span className="text-xs font-semibold text-slate-500">Consultation Fee</span>
+              <p className="text-3xl font-black text-slate-900">₹{doc.consultationFee || 750}</p>
+              <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 inline-block mt-1">
+                Includes OPD Token & Prescription
+              </span>
             </div>
 
             <button
               onClick={() => setBookingDoctor(doc)}
-              className="w-full bg-gradient-to-r from-brand-600 via-cyan-600 to-emerald-600 hover:from-brand-500 hover:to-emerald-500 text-white font-extrabold text-xs px-6 py-3.5 rounded-xl shadow-xl shadow-cyan-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+              className="w-full bg-gradient-to-r from-brand-600 to-cyan-600 hover:from-brand-500 hover:to-cyan-500 text-white font-extrabold text-xs px-6 py-3.5 rounded-xl shadow-sm shadow-brand-500/15 flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
             >
               <Calendar className="w-4 h-4" />
               <span>Book OPD Appointment</span>
@@ -108,40 +143,43 @@ export const DoctorDetails = () => {
         </div>
       </div>
 
-      {/* Grid: Biography, Timings & Patient Reviews */}
+      {/* 2. TWO-COLUMN LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left Column: About & Testimonials */}
+        {/* Left Column: Biography, Languages & Patient Reviews */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* Biography & Qualifications */}
-          <div className="glass-card p-6 border-slate-800 space-y-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Stethoscope className="w-4 h-4 text-cyan-400" /> Professional Overview & Clinical Background
+          {/* Biography & Clinical Background */}
+          <div className="glass-card p-6 bg-white border border-slate-200/90 rounded-2xl space-y-4 shadow-xs">
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <Stethoscope className="w-4 h-4 text-cyan-600" /> Professional Overview & Clinical Background
             </h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">{doc.bio}</p>
+            
+            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
+              {doc.bio || `${doc.name} is a senior ${doc.specialization} practicing at ${doc.hospitalName} with ${experienceText}. Specialized in advanced clinical diagnostics, OPD consultations, and patient-centered treatment plans.`}
+            </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800 text-xs">
-              <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-1">
-                <span className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">Languages Spoken</span>
-                <p className="text-cyan-300 font-semibold">{doc.languages ? doc.languages.join(', ') : 'Kannada, English, Tulu'}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100 text-xs">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-1">
+                <span className="font-extrabold text-slate-400 uppercase text-[10px] tracking-wider">Languages Spoken</span>
+                <p className="text-slate-900 font-extrabold">🗣 {doc.languages ? doc.languages.join(', ') : 'English, Kannada, Tulu, Konkani'}</p>
               </div>
 
-              <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-1">
-                <span className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">Hospital Location</span>
-                <p className="text-slate-200 font-semibold truncate">{doc.location} ({doc.distance})</p>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-1">
+                <span className="font-extrabold text-slate-400 uppercase text-[10px] tracking-wider">Hospital Location</span>
+                <p className="text-slate-900 font-extrabold truncate">📍 {doc.location || 'Mangaluru'} ({doc.distance || '2.5 km'})</p>
               </div>
             </div>
           </div>
 
-          {/* Patient Reviews & Testimonials */}
-          <div className="glass-card p-6 border-slate-800 space-y-4">
+          {/* Patient Feedback & Testimonials */}
+          <div className="glass-card p-6 bg-white border border-slate-200/90 rounded-2xl space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <ThumbsUp className="w-4 h-4 text-amber-400" /> Patient Feedback & Testimonials ({doc.reviewsCount})
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <ThumbsUp className="w-4 h-4 text-amber-500" /> Patient Feedback ({doc.reviewsCount || 130})
               </h3>
-              <span className="text-xs text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-                ★ {doc.rating} / 5.0
+              <span className="text-xs text-amber-800 font-black bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
+                ★ {doc.rating || '4.90'} / 5.0
               </span>
             </div>
 
@@ -151,13 +189,13 @@ export const DoctorDetails = () => {
                 { name: 'Deepa Shetty (Udupi)', rating: 5, date: '1 week ago', text: 'Zero waiting time with MedConnect live queue tracker. Prescribed effective medications.' },
                 { name: 'Venkatesh Rao (Manipal)', rating: 4, date: '2 weeks ago', text: 'Extremely knowledgeable doctor. Took time to analyze all my blood test reports.' },
               ].map((rev, idx) => (
-                <div key={idx} className="bg-slate-950/70 border border-slate-800/80 p-4 rounded-2xl space-y-1.5">
+                <div key={idx} className="bg-slate-50/80 border border-slate-200/80 p-4 rounded-2xl space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white">{rev.name}</span>
-                    <span className="text-amber-400 font-bold flex items-center gap-1">★ {rev.rating}.0</span>
+                    <span className="font-bold text-slate-900">{rev.name}</span>
+                    <span className="text-amber-800 font-extrabold flex items-center gap-1">★ {rev.rating}.0</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">{rev.text}</p>
-                  <p className="text-[10px] text-slate-500 pt-1">{rev.date} • ABDM Verified Patient</p>
+                  <p className="text-xs text-slate-700 font-medium leading-relaxed">{rev.text}</p>
+                  <p className="text-[10px] text-slate-500 font-semibold pt-1">{rev.date} • ABDM Verified Patient</p>
                 </div>
               ))}
             </div>
@@ -165,13 +203,13 @@ export const DoctorDetails = () => {
 
         </div>
 
-        {/* Right Column: OPD Slots & Similar Doctors */}
+        {/* Right Column: OPD Slot Selector & Other Specialists */}
         <div className="space-y-6">
           
           {/* OPD Slot Selection Card */}
-          <div className="glass-card p-6 border-slate-800 space-y-4 bg-slate-900/90">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-cyan-400" /> Select Available Time Slot Today
+          <div className="glass-card p-6 border-slate-200/90 bg-white space-y-4 rounded-2xl shadow-xs">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-brand-600" /> Select Available Time Slot Today
             </h3>
 
             <div className="grid grid-cols-2 gap-2">
@@ -184,8 +222,8 @@ export const DoctorDetails = () => {
                     onClick={() => setSelectedSlot(slot)}
                     className={`p-3 rounded-xl text-center text-xs font-bold transition-all ${
                       isSelected
-                        ? 'bg-cyan-500 text-slate-950 shadow-md glow-cyan ring-2 ring-cyan-400'
-                        : 'bg-slate-950 border border-slate-800 text-slate-200 hover:border-slate-700'
+                        ? 'bg-brand-600 text-white shadow-sm border-brand-600'
+                        : 'bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-800'
                     }`}
                   >
                     {slot}
@@ -196,7 +234,7 @@ export const DoctorDetails = () => {
 
             <button
               onClick={() => setBookingDoctor(doc)}
-              className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all"
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all"
             >
               <Calendar className="w-4 h-4" />
               <span>Confirm & Book Appointment</span>
@@ -205,8 +243,8 @@ export const DoctorDetails = () => {
 
           {/* Similar Department Doctors */}
           {similarDoctors.length > 0 && (
-            <div className="glass-card p-5 border-slate-800 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <div className="glass-card p-5 border-slate-200/90 bg-white space-y-3 rounded-2xl shadow-xs">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
                 Other {doc.specialization} Specialists
               </h4>
 
@@ -215,16 +253,16 @@ export const DoctorDetails = () => {
                   <div
                     key={simDoc.id}
                     onClick={() => { setSelectedDoctor(simDoc); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/40 flex items-center justify-between cursor-pointer group transition-all"
+                    className="bg-slate-50 hover:bg-slate-100 p-3 rounded-xl border border-slate-200/80 flex items-center justify-between cursor-pointer group transition-all"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <img src={simDoc.photo} alt={simDoc.name} className="w-9 h-9 rounded-xl object-cover" />
-                      <div>
-                        <h5 className="font-bold text-xs text-white group-hover:text-cyan-300 transition-colors">{simDoc.name}</h5>
-                        <p className="text-[10px] text-slate-400">{simDoc.hospitalName}</p>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img src={simDoc.photo} alt={simDoc.name} className="w-9 h-9 rounded-xl object-cover border border-slate-200 shrink-0" />
+                      <div className="min-w-0">
+                        <h5 className="font-extrabold text-xs text-slate-900 group-hover:text-brand-600 transition-colors truncate">{simDoc.name}</h5>
+                        <p className="text-[10px] text-slate-500 font-medium truncate">{simDoc.hospitalName}</p>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-brand-600 group-hover:translate-x-1 transition-transform shrink-0" />
                   </div>
                 ))}
               </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Search, Filter, Star, Clock, MapPin, Languages, Calendar, ShieldCheck, ChevronRight, Sparkles } from 'lucide-react';
 import { BookingModal } from '../../components/ui/BookingModal';
+import { DoctorCard } from '../../components/ui/DoctorCard';
 
 export const BookAppointment = () => {
   const { doctors, setSelectedDoctor, setActiveView, setBookingDoctor, bookingDoctor } = useApp();
@@ -168,92 +169,12 @@ export const BookAppointment = () => {
       {/* Doctors Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredDoctors.map(doc => (
-          <div key={doc.id} className="glass-card glass-card-hover p-5 border-slate-800 flex flex-col justify-between group">
-            
-            <div className="space-y-4">
-              
-              {/* Doctor Avatar & Rating */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={doc.photo}
-                    alt={doc.name}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-brand-500/30 group-hover:border-cyan-400 transition-colors"
-                  />
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
-                      {doc.specialization}
-                    </span>
-                    <h3
-                      onClick={() => handleDoctorClick(doc)}
-                      className="font-bold text-base text-white mt-1 hover:text-cyan-300 cursor-pointer transition-colors"
-                    >
-                      {doc.name}
-                    </h3>
-                    <p className="text-[11px] text-slate-400">{doc.experience} Years Exp.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-xl text-amber-400 font-bold text-xs">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span>{doc.rating}</span>
-                </div>
-              </div>
-
-              {/* Hospital & Distance */}
-              <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-slate-800">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span className="truncate">{doc.hospitalName}</span>
-                  <span className="text-[10px] text-cyan-300 font-bold bg-cyan-500/10 px-1.5 py-0.5 rounded shrink-0">{doc.distance}</span>
-                </div>
-
-                <div className="flex items-center gap-2 text-slate-400">
-                  <Languages className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>{doc.languages.join(', ')}</span>
-                </div>
-              </div>
-
-              {/* Available Slots */}
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5 block">
-                  Next Available Slots Today
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {doc.availableSlots.slice(0, 3).map(slot => (
-                    <span key={slot} className="text-[10px] font-semibold bg-slate-950 border border-slate-800 text-slate-300 px-2.5 py-1 rounded-lg">
-                      {slot}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Bottom Actions */}
-            <div className="pt-4 mt-4 border-t border-slate-800 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400">Fee</span>
-                <p className="text-base font-extrabold text-white">₹{doc.consultationFee}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleDoctorClick(doc)}
-                  className="bg-slate-950 hover:bg-slate-850 text-slate-300 text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-800"
-                >
-                  Profile
-                </button>
-                <button
-                  onClick={() => setBookingDoctor(doc)}
-                  className="bg-gradient-to-r from-brand-600 to-cyan-500 hover:from-brand-500 hover:to-cyan-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-brand-500/20"
-                >
-                  Book Slot
-                </button>
-              </div>
-            </div>
-
-          </div>
+          <DoctorCard
+            key={doc.id}
+            doctor={doc}
+            onSelectProfile={(d) => handleDoctorClick(d)}
+            onBookSlot={(d) => setBookingDoctor(d)}
+          />
         ))}
       </div>
 

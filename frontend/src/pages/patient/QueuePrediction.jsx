@@ -5,17 +5,17 @@ import { Clock, Activity, Users, CheckCircle2, Calendar, RefreshCw } from 'lucid
 import { BookingModal } from '../../components/ui/BookingModal';
 
 export const QueuePrediction = () => {
-  const { appointments, doctors, setBookingDoctor, bookingDoctor } = useApp();
-  const upcomingApt = appointments.find(a => a.status === 'upcoming');
+  const activeStatuses = ['upcoming', 'booked', 'waiting', 'in_consultation'];
+  const upcomingApt = appointments.find(a => activeStatuses.includes(a.status?.toLowerCase()));
   const [selectedDocId, setSelectedDocId] = useState(upcomingApt ? upcomingApt.doctorId : doctors[0]?.id);
 
   const activeApt = upcomingApt && upcomingApt.doctorId === selectedDocId ? upcomingApt : null;
   const doc = doctors.find(d => d.id === selectedDocId) || doctors[0];
 
   const [isLoading, setIsLoading] = useState(false);
-  const [queueNumber, setQueueNumber] = useState(activeApt ? (activeApt.queueNumber || 4) : 4);
+  const [queueNumber, setQueueNumber] = useState(activeApt ? (activeApt.queueNumber || 1) : 1);
   const [patientsAhead, setPatientsAhead] = useState(queueNumber > 1 ? queueNumber - 1 : 0);
-  const [waitTime, setWaitTime] = useState(patientsAhead * 5);
+  const [waitTime, setWaitTime] = useState(patientsAhead * 10);
   const [estTimeStr, setEstTimeStr] = useState('');
   const [totalBookedInDb, setTotalBookedInDb] = useState(0);
 
@@ -27,10 +27,10 @@ export const QueuePrediction = () => {
       if (qStatus) {
         setTotalBookedInDb(qStatus.totalBookedInDb || 0);
         if (!activeApt) {
-          const qNum = qStatus.queueNumber || 4;
+          const qNum = qStatus.queueNumber || 1;
           setQueueNumber(qNum);
-          setPatientsAhead(qStatus.patientsAhead || (qNum - 1));
-          setWaitTime(qStatus.waitTimeMinutes || (qNum - 1) * 5);
+          setPatientsAhead(qStatus.patientsAhead || Math.max(0, qNum - 1));
+          setWaitTime(qStatus.waitTimeMinutes || Math.max(0, qNum - 1) * 10);
           setEstTimeStr(qStatus.estimatedConsultationTime || '');
         }
       }
@@ -50,16 +50,18 @@ export const QueuePrediction = () => {
   // Synchronize when upcoming appointment changes
   useEffect(() => {
     if (activeApt) {
-      setQueueNumber(activeApt.queueNumber || 4);
-      const ahead = Math.max(0, (activeApt.queueNumber || 4) - 1);
+      const qNum = activeApt.queueNumber || 1;
+      setQueueNumber(qNum);
+      const ahead = Math.max(0, qNum - 1);
       setPatientsAhead(ahead);
-      setWaitTime(ahead * 5);
+      setWaitTime(ahead * 10);
       
       const now = new Date();
-      const est = new Date(now.getTime() + ahead * 5 * 60000);
+      const est = new Date(now.getTime() + ahead * 10 * 60000);
       setEstTimeStr(est.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }
   }, [activeApt]);
+
 
   // Real-time countdown timer tick
   useEffect(() => {

@@ -111,30 +111,30 @@ export const AIMedicalChatbot = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-8.5rem)] max-h-[720px] min-h-[500px] flex flex-col glass-card border-slate-800 overflow-hidden relative shadow-2xl glow-cyan">
+    <div className="h-[calc(100vh-8.5rem)] max-h-[720px] min-h-[500px] flex flex-col glass-card border-slate-200/80 overflow-hidden relative bg-white shadow-sm">
       
       {/* Top Bar (Fixed) */}
-      <div className="bg-slate-950 px-6 py-3.5 border-b border-slate-800 flex items-center justify-between shrink-0">
+      <div className="bg-slate-50 px-6 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-cyan-500 to-emerald-400 p-0.5 shadow-lg shadow-brand-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Bot className="w-5 h-5 text-cyan-400" />
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-cyan-500 to-emerald-500 p-0.5 shadow-sm">
+            <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center">
+              <Bot className="w-5 h-5 text-brand-600" />
             </div>
           </div>
           <div>
-            <h3 className="font-bold text-sm text-white flex items-center gap-2">
+            <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
               <span>MedConnect AI Assistant (RAG Grounded)</span>
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1 font-semibold">
+              <span className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1 font-bold">
                 ● Gemini Live
               </span>
             </h3>
-            <p className="text-[11px] text-slate-400">Kannada, Tulu & English Multi-lingual RAG Engine</p>
+            <p className="text-[11px] text-slate-500 font-medium">Kannada, Tulu & English Multi-lingual RAG Engine</p>
           </div>
         </div>
 
         <button
           onClick={() => setMessages([messages[0]])}
-          className="text-xs text-slate-400 hover:text-white bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center gap-1.5 hover:border-slate-700 transition-all"
+          className="text-xs text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 hover:border-slate-300 transition-all font-semibold shadow-xs"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Chat</span>
@@ -142,7 +142,7 @@ export const AIMedicalChatbot = () => {
       </div>
 
       {/* Chat Messages Stream (Scrolls smoothly inside container) */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/40">
         {messages.map(msg => (
           <div
             key={msg.id}
@@ -151,18 +151,18 @@ export const AIMedicalChatbot = () => {
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
               msg.sender === 'user'
                 ? 'bg-brand-600 text-white'
-                : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
             }`}>
-              {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+              {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4 text-cyan-600" />}
             </div>
 
             <div className={`p-4 rounded-2xl text-xs space-y-1 ${
               msg.sender === 'user'
-                ? 'bg-gradient-to-r from-brand-600 to-cyan-600 text-white font-medium shadow-md'
-                : 'bg-slate-900/90 border border-slate-800 text-slate-200 shadow-sm'
+                ? 'bg-brand-600 text-white font-semibold shadow-xs'
+                : 'bg-white border border-slate-200/80 text-slate-800 shadow-xs'
             }`}>
-              <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-              <p className={`text-[10px] text-right ${msg.sender === 'user' ? 'text-cyan-200' : 'text-slate-500'}`}>
+              <p className="leading-relaxed whitespace-pre-wrap font-medium">{msg.text}</p>
+              <p className={`text-[10px] text-right ${msg.sender === 'user' ? 'text-cyan-100' : 'text-slate-400'}`}>
                 {msg.timestamp}
               </p>
             </div>
@@ -171,13 +171,13 @@ export const AIMedicalChatbot = () => {
 
         {isTyping && (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-200 flex items-center justify-center">
               <Bot className="w-4 h-4" />
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce"></span>
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce [animation-delay:.2s]"></span>
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce [animation-delay:.4s]"></span>
+            <div className="bg-white border border-slate-200 p-3 rounded-2xl flex items-center gap-1.5 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-cyan-600 animate-bounce"></span>
+              <span className="w-2 h-2 rounded-full bg-cyan-600 animate-bounce [animation-delay:.2s]"></span>
+              <span className="w-2 h-2 rounded-full bg-cyan-600 animate-bounce [animation-delay:.4s]"></span>
             </div>
           </div>
         )}
@@ -186,13 +186,13 @@ export const AIMedicalChatbot = () => {
       </div>
 
       {/* Suggested Quick Prompts (Fixed) */}
-      <div className="px-6 py-2 bg-slate-950/80 border-t border-slate-800 flex items-center gap-2 overflow-x-auto shrink-0">
+      <div className="px-6 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-2 overflow-x-auto shrink-0">
         <span className="text-[10px] text-slate-500 font-bold shrink-0">Prompts:</span>
         {suggestedPrompts.map((p, i) => (
           <button
             key={i}
             onClick={() => handleSendMessage(p)}
-            className="text-[10px] bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-xl whitespace-nowrap transition-all"
+            className="text-[10px] bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-xl whitespace-nowrap transition-all shadow-xs"
           >
             {p}
           </button>
@@ -200,7 +200,7 @@ export const AIMedicalChatbot = () => {
       </div>
 
       {/* Input Bar (Fixed) */}
-      <div className="p-4 bg-slate-950 border-t border-slate-800 shrink-0">
+      <div className="p-4 bg-white border-t border-slate-200 shrink-0">
         <form
           onSubmit={e => { e.preventDefault(); handleSendMessage(); }}
           className="flex items-center gap-2"
@@ -209,7 +209,7 @@ export const AIMedicalChatbot = () => {
             type="button"
             onClick={toggleVoice}
             className={`p-3 rounded-xl transition-all ${
-              isListening ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              isListening ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
             }`}
             title="Simulate Voice Input"
           >
@@ -221,13 +221,13 @@ export const AIMedicalChatbot = () => {
             value={input}
             onChange={e => setInput(e.target.value)}
             placeholder={isListening ? 'Listening to voice...' : 'Ask MedConnect AI anything about symptoms, doctors, or hospital schemes...'}
-            className="glass-input text-xs w-full"
+            className="glass-input text-xs w-full bg-slate-50 border-slate-300 text-slate-900 focus:bg-white"
           />
 
           <button
             type="submit"
             disabled={!input.trim()}
-            className="bg-brand-600 hover:bg-brand-500 text-white p-3 rounded-xl transition-all disabled:opacity-50"
+            className="bg-brand-600 hover:bg-brand-500 text-white p-3 rounded-xl transition-all disabled:opacity-50 shadow-sm"
           >
             <Send className="w-4 h-4" />
           </button>

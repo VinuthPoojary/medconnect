@@ -25,14 +25,41 @@ import { NotificationsPage } from './pages/patient/NotificationsPage';
 import { ProfilePage } from './pages/patient/ProfilePage';
 import { HospitalDashboard } from './pages/hospital/HospitalDashboard';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
+import { DoctorLoginPage } from './pages/doctor/DoctorLoginPage';
 
 const MainLayout = () => {
-  const { activeView } = useApp();
+  const { activeView, isAuthenticated, currentUser } = useApp();
 
   const renderContent = () => {
+    const publicViews = ['landing', 'login', 'register', 'forgot-password', 'doctor-login'];
+
+    // Dedicated Doctor Login route
+    if (activeView === 'doctor-login') {
+      return <DoctorLoginPage />;
+    }
+
+    // PRODUCTION AUTH GUARD: Unauthenticated users targeting doctor portal redirect to Doctor Login
+    if (!isAuthenticated && activeView.startsWith('doctor-')) {
+      return <DoctorLoginPage />;
+    }
+
+    // PRODUCTION AUTH GUARD: Unauthenticated users are redirected to Login Page
+    if (!isAuthenticated && !publicViews.includes(activeView)) {
+      return <AuthPages />;
+    }
+
+    // Role-based Doctor Dashboard redirection
+    if (currentUser?.role === 'doctor' && (activeView === 'dashboard' || activeView.startsWith('doctor-'))) {
+      return <DoctorDashboard />;
+    }
+
     switch (activeView) {
       case 'landing':
         return <LandingPage />;
+
+      case 'doctor-login':
+        return <DoctorLoginPage />;
 
       case 'login':
       case 'register':
@@ -87,6 +114,15 @@ const MainLayout = () => {
       case 'profile':
         return <ProfilePage />;
 
+      case 'doctor-dashboard':
+      case 'doctor-overview':
+      case 'doctor-appointments':
+      case 'doctor-patients':
+      case 'doctor-reports':
+      case 'doctor-prescriptions':
+      case 'doctor-profile':
+        return <DoctorDashboard />;
+
       case 'hospital-overview':
       case 'manage-doctors':
       case 'hospital-appointments':
@@ -103,8 +139,9 @@ const MainLayout = () => {
     }
   };
 
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-brand-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-brand-600 selection:text-white">
       <Header />
 
       <div className="flex-1 flex w-full">

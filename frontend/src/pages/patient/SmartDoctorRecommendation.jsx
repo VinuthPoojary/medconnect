@@ -219,32 +219,32 @@ export const SmartDoctorRecommendation = () => {
 
           <div className="space-y-4">
             {recommendedDocs.map((rec, i) => (
-              <div key={i} className="glass-card p-6 border-slate-800 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <img src={rec.doctor.photo} alt={rec.doctor.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-brand-500/30 shrink-0" />
+              <div key={i} className="glass-card p-6 border-slate-200/90 bg-white space-y-4 rounded-[18px] shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <img src={rec.doctor.photo} alt={rec.doctor.name} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shrink-0 shadow-2xs" />
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
-                          {rec.doctor.specialization}
-                        </span>
-                        <span className="text-[10px] font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                          ★ {rec.doctor.rating}
-                        </span>
-                      </div>
                       <h4
                         onClick={() => { setSelectedDoctor(rec.doctor); setActiveView('doctor-details'); }}
-                        className="font-bold text-base text-white mt-1 hover:text-cyan-300 cursor-pointer transition-colors"
+                        className="font-extrabold text-lg text-slate-900 hover:text-brand-600 cursor-pointer transition-colors"
                       >
                         {rec.doctor.name}
                       </h4>
-                      <p className="text-xs text-slate-400">{rec.doctor.hospitalName} • {rec.doctor.experience} Exp.</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] font-bold uppercase text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200/80">
+                          {rec.doctor.specialization}
+                        </span>
+                        <span className="text-[11px] font-extrabold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
+                          ★ {rec.doctor.rating}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-600 mt-1">{rec.doctor.hospitalName} • {rec.doctor.experience} years experience</p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950 border border-cyan-500/30 p-3.5 rounded-2xl text-center shrink-0">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">AI Match Score</span>
-                    <p className="text-2xl font-black text-cyan-400">{rec.matchScore}%</p>
+                  <div className="bg-cyan-50 border border-cyan-200 p-3 rounded-2xl text-center shrink-0">
+                    <span className="text-[10px] text-cyan-800 font-extrabold uppercase tracking-wider">AI Match Score</span>
+                    <p className="text-2xl font-black text-cyan-700">{rec.matchScore}%</p>
                   </div>
                 </div>
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { fetchHospitalSchemesApi, createHospitalSchemeApi, deleteHospitalSchemeApi } from '../../services/api';
+import { fetchHospitalSchemesApi, createHospitalSchemeApi, deleteHospitalSchemeApi, fetchLiveQueueApi, addDoctorByHospitalApi } from '../../services/api';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Building2, Stethoscope, Users, Bed, DollarSign, Plus, Trash2, Sparkles, Search, FileText, ShieldCheck, Upload, ExternalLink } from 'lucide-react';
+import { Building2, Stethoscope, Users, Bed, DollarSign, Plus, Trash2, Sparkles, Search, FileText, ShieldCheck, Upload, ExternalLink, Activity } from 'lucide-react';
 
 export const HospitalDashboard = () => {
   const { doctors, appointments, addDoctor, deleteDoctor, currentUser } = useApp();
@@ -13,13 +13,22 @@ export const HospitalDashboard = () => {
   const [showAddDocModal, setShowAddDocModal] = useState(false);
   const [showAddSchemeModal, setShowAddSchemeModal] = useState(false);
 
+  // Live Queue State from Supabase PostgreSQL
+  const [liveQueue, setLiveQueue] = useState([]);
+
   // Schemes State for RAG
   const [schemes, setSchemes] = useState([]);
   const [isLoadingSchemes, setIsLoadingSchemes] = useState(false);
 
-  // New Doctor State
+  // New Doctor Full Credentials State (Requirement 1)
   const [newDocName, setNewDocName] = useState('');
+  const [newDocEmail, setNewDocEmail] = useState('');
+  const [newDocPhone, setNewDocPhone] = useState('');
   const [newDocSpec, setNewDocSpec] = useState('Cardiologist');
+  const [newDocQual, setNewDocQual] = useState('MBBS, MD');
+  const [newDocExp, setNewDocExp] = useState('8 Years');
+  const [newDocLicense, setNewDocLicense] = useState('KA-MED-10024');
+  const [newDocPassword, setNewDocPassword] = useState('Doctor@2026');
 
   // New Scheme RAG State
   const [schemeTitle, setSchemeTitle] = useState('');
@@ -29,6 +38,25 @@ export const HospitalDashboard = () => {
   const [description, setDescription] = useState('');
   const [contentText, setContentText] = useState('');
   const [documentUrl, setDocumentUrl] = useState('');
+
+  const loadLiveQueue = async () => {
+    try {
+      const data = await fetchLiveQueueApi('', hospitalName, '');
+      if (data && data.length > 0) {
+        setLiveQueue(data);
+      } else {
+        setLiveQueue(appointments);
+      }
+    } catch (err) {
+      setLiveQueue(appointments);
+    }
+  };
+
+  useEffect(() => {
+    loadLiveQueue();
+    const timer = setInterval(loadLiveQueue, 2000);
+    return () => clearInterval(timer);
+  }, [hospitalName, appointments]);
 
   const loadSchemes = async () => {
     setIsLoadingSchemes(true);
@@ -98,34 +126,62 @@ export const HospitalDashboard = () => {
     { hour: '06 PM', patients: 29 },
   ];
 
+
   const filteredDocs = doctors.filter(d => d.name.toLowerCase().includes(searchDoctor.toLowerCase()) || d.specialization.toLowerCase().includes(searchDoctor.toLowerCase()));
 
-  const handleAddDoctor = (e) => {
+  const handleAddDoctor = async (e) => {
     e.preventDefault();
     if (!newDocName.trim()) return;
 
-    const newDoc = {
-      id: `doc-${Date.now()}`,
-      name: newDocName,
-      photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
+    const email = newDocEmail || `dr.${newDocName.toLowerCase().replace(/[^a-z]/g, '')}@medconnect.com`;
+    const phone = newDocPhone || `+91 98${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const pass = newDocPassword || 'Doctor@2026';
+
+    const doctorData = {
+      name: newDocName.startsWith('Dr.') ? newDocName : `Dr. ${newDocName}`,
+      email,
+      phone,
       specialization: newDocSpec,
-      experience: '8 yrs',
-      rating: 4.8,
-      reviewsCount: 12,
-      languages: ['Kannada', 'English'],
-      availableSlots: ['10:00 AM', '02:00 PM', '05:00 PM'],
+      qualification: newDocQual,
+      experience: newDocExp,
+      licenseNumber: newDocLicense,
+      password: pass,
       hospitalName,
-      location: 'Mangaluru',
-      distance: '2.4 km',
       consultationFee: 750,
-      education: 'MBBS, MD',
-      bio: 'Experienced specialist added to hospital OPD roster.',
-      isAvailableToday: true,
     };
 
-    addDoctor(newDoc);
-    setNewDocName('');
-    setShowAddDocModal(false);
+    try {
+      const res = await addDoctorByHospitalApi(doctorData);
+      const created = res.doctor || doctorData;
+
+      const newDoc = {
+        id: created.id || `doc-${Date.now()}`,
+        name: created.name || doctorData.name,
+        photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
+        specialization: newDocSpec,
+        experience: newDocExp,
+        rating: 4.9,
+        reviewsCount: 1,
+        languages: ['Kannada', 'English', 'Tulu'],
+        availableSlots: ['09:30 AM', '11:00 AM', '02:30 PM', '04:15 PM'],
+        hospitalName,
+        location: 'Mangaluru',
+        distance: '2.5 km',
+        consultationFee: 750,
+        education: newDocQual,
+        bio: `Consultant ${newDocSpec} at ${hospitalName}.`,
+        isAvailableToday: true,
+      };
+
+      addDoctor(newDoc);
+      alert(`🎉 Doctor Account Registered Successfully!\n\nName: ${newDoc.name}\nEmail: ${email}\nInitial Password: ${pass}\n\nThe doctor can now log in at Doctor Login.`);
+      setNewDocName('');
+      setNewDocEmail('');
+      setNewDocPhone('');
+      setShowAddDocModal(false);
+    } catch (err) {
+      alert('Failed to register doctor account: ' + err.message);
+    }
   };
 
   return (
@@ -216,31 +272,42 @@ export const HospitalDashboard = () => {
 
           {/* Today's Appointments Queue Table */}
           <div className="glass-card p-6 border-slate-800 space-y-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Live OPD Queue Roster</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <span>Current Patient Queue (Supabase PostgreSQL Live)</span>
+                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2.5 py-0.5 rounded-full border border-emerald-500/30 font-bold flex items-center gap-1">
+                  <Activity className="w-3 h-3 animate-pulse" /> Live Realtime
+                </span>
+              </h3>
+              <span className="text-xs text-slate-400">Ordered by booking timestamp (created_at ASC)</span>
+            </div>
 
             <div className="overflow-x-auto rounded-2xl border border-slate-800">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
                   <tr>
+                    <th className="p-3">Queue Pos</th>
                     <th className="p-3">Patient Name</th>
                     <th className="p-3">Assigned Doctor</th>
                     <th className="p-3">Slot Time</th>
-                    <th className="p-3">Ticket #</th>
-                    <th className="p-3">Status</th>
+                    <th className="p-3">Queue Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
-                  {appointments.map(apt => (
-                    <tr key={apt.id} className="hover:bg-slate-900/50">
+                  {(liveQueue.length > 0 ? liveQueue : appointments).map((apt, index) => (
+                    <tr key={apt.id || index} className="hover:bg-slate-900/50">
+                      <td className="p-3">
+                        <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-extrabold text-xs border border-cyan-500/30">
+                          #{index + 1}
+                        </span>
+                      </td>
                       <td className="p-3 font-bold text-white">{apt.patientName || 'Kavya Poojary'}</td>
                       <td className="p-3 text-cyan-400 font-medium">{apt.doctorName}</td>
-                      <td className="p-3 text-slate-300">{apt.timeSlot}</td>
-                      <td className="p-3 font-bold text-amber-400">#{apt.queueNumber}</td>
+                      <td className="p-3 text-slate-300 font-semibold">{apt.timeSlot}</td>
                       <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          apt.status === 'upcoming' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-emerald-500/20 text-emerald-400'
-                        }`}>
-                          {apt.status}
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                          BOOKED (Pos #{index + 1})
                         </span>
                       </td>
                     </tr>
@@ -249,6 +316,7 @@ export const HospitalDashboard = () => {
               </table>
             </div>
           </div>
+
 
         </div>
       )}
@@ -529,34 +597,112 @@ export const HospitalDashboard = () => {
             <h3 className="font-bold text-sm text-white">Add Doctor to Roster</h3>
 
             <form onSubmit={handleAddDoctor} className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-slate-300 mb-1 block">Doctor Full Name</label>
-                <input
-                  type="text"
-                  value={newDocName}
-                  onChange={e => setNewDocName(e.target.value)}
-                  placeholder="Dr. Suman Poojary"
-                  className="glass-input text-xs w-full"
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-300 mb-1 block">Doctor Full Name *</label>
+                  <input
+                    type="text"
+                    value={newDocName}
+                    onChange={e => setNewDocName(e.target.value)}
+                    placeholder="Dr. Vignesh Shetty"
+                    className="glass-input text-xs w-full"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-300 mb-1 block">Email Address *</label>
+                  <input
+                    type="email"
+                    value={newDocEmail}
+                    onChange={e => setNewDocEmail(e.target.value)}
+                    placeholder="vignesh.shetty@medconnect.com"
+                    className="glass-input text-xs w-full"
+                    required
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-300 mb-1 block">Specialization</label>
-                <select
-                  value={newDocSpec}
-                  onChange={e => setNewDocSpec(e.target.value)}
-                  className="glass-input text-xs w-full bg-slate-950 text-slate-200"
-                >
-                  <option value="Cardiologist">Cardiologist</option>
-                  <option value="Neurologist">Neurologist</option>
-                  <option value="Orthopedic Surgeon">Orthopedic Surgeon</option>
-                  <option value="Dermatologist & Cosmetologist">Dermatologist</option>
-                  <option value="Pediatrician">Pediatrician</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-300 mb-1 block">Mobile Number *</label>
+                  <input
+                    type="text"
+                    value={newDocPhone}
+                    onChange={e => setNewDocPhone(e.target.value)}
+                    placeholder="+91 94481 22334"
+                    className="glass-input text-xs w-full"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-300 mb-1 block">Password *</label>
+                  <input
+                    type="password"
+                    value={newDocPassword}
+                    onChange={e => setNewDocPassword(e.target.value)}
+                    placeholder="Doctor@2026"
+                    className="glass-input text-xs w-full"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-300 mb-1 block">Specialization *</label>
+                  <select
+                    value={newDocSpec}
+                    onChange={e => setNewDocSpec(e.target.value)}
+                    className="glass-input text-xs w-full bg-slate-950 text-slate-200"
+                  >
+                    <option value="Cardiologist">Cardiologist</option>
+                    <option value="Neurologist">Neurologist</option>
+                    <option value="Orthopedic Surgeon">Orthopedic Surgeon</option>
+                    <option value="Dermatologist & Cosmetologist">Dermatologist</option>
+                    <option value="Pediatrician">Pediatrician</option>
+                    <option value="General Physician">General Physician</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-300 mb-1 block">Qualification</label>
+                  <input
+                    type="text"
+                    value={newDocQual}
+                    onChange={e => setNewDocQual(e.target.value)}
+                    placeholder="MBBS, MD"
+                    className="glass-input text-xs w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-300 mb-1 block">Experience</label>
+                  <input
+                    type="text"
+                    value={newDocExp}
+                    onChange={e => setNewDocExp(e.target.value)}
+                    placeholder="8 Years"
+                    className="glass-input text-xs w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-300 mb-1 block">Medical Registration / License #</label>
+                  <input
+                    type="text"
+                    value={newDocLicense}
+                    onChange={e => setNewDocLicense(e.target.value)}
+                    placeholder="KA-MED-10024"
+                    className="glass-input text-xs w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowAddDocModal(false)}
@@ -566,11 +712,12 @@ export const HospitalDashboard = () => {
                 </button>
                 <button
                   type="submit"
-                  className="bg-brand-600 text-white font-bold px-4 py-2 rounded-xl"
+                  className="bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg"
                 >
-                  Save Doctor
+                  Create & Register Doctor Account
                 </button>
               </div>
+
             </form>
           </div>
         </div>

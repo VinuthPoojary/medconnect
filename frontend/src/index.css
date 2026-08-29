@@ -4,68 +4,68 @@
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-brand-500 selection:text-white;
+    @apply bg-slate-50 text-slate-900 font-sans antialiased min-h-screen selection:bg-brand-600 selection:text-white;
   }
 }
 
+/* Light Hospitality Theme Utility Classes */
 .glass-card {
-  @apply bg-slate-900/70 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl transition-all duration-300;
+  @apply bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-md shadow-slate-200/50 rounded-2xl transition-all duration-300;
 }
 
 .glass-card-hover {
-  @apply hover:border-brand-500/50 hover:shadow-2xl hover:shadow-brand-500/10 hover:-translate-y-1;
+  @apply hover:border-brand-500/40 hover:shadow-xl hover:shadow-brand-500/10 hover:-translate-y-1;
 }
 
 .glass-input {
-  @apply bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all;
+  @apply bg-slate-50/80 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder-slate-400 font-medium focus:bg-white focus:outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20 transition-all;
 }
 
 .glass-nav {
-  @apply bg-slate-950/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-40;
+  @apply bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 shadow-sm;
 }
 
 .text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-700 via-teal-600 to-cyan-600 font-extrabold;
 }
 
 .text-gradient-cyan {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-700 font-extrabold;
 }
 
 .text-gradient-emerald {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-300;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 font-extrabold;
 }
 
 .glow-blue {
-  box-shadow: 0 0 30px -5px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 20px -2px rgba(37, 99, 235, 0.15);
 }
 
 .glow-cyan {
-  box-shadow: 0 0 30px -5px rgba(6, 182, 212, 0.4);
+  box-shadow: 0 4px 20px -2px rgba(8, 145, 178, 0.18);
 }
 
 .glow-emerald {
-  box-shadow: 0 0 30px -5px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 20px -2px rgba(5, 150, 105, 0.15);
 }
 
-/* Premium Custom Scrollbars */
+/* Premium Light Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: #f1f5f9;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(6, 182, 212, 0.3);
+  background: rgba(148, 163, 184, 0.5);
   border-radius: 9999px;
   transition: all 0.2s ease-in-out;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(6, 182, 212, 0.7);
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+  background: rgba(8, 145, 178, 0.7);
 }

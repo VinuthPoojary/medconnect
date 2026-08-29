@@ -22,14 +22,49 @@ export const checkBackendHealth = async () => {
  * Real Backend Auth Calls
  */
 export const loginApi = async (email, password, role) => {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, role }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Authentication failed');
-  return data;
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, phone: email, loginIdentifier: email, password, role }),
+    });
+
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Authentication failed');
+      return data;
+    }
+    throw new Error('Authentication service returned invalid response.');
+  } catch (err) {
+    if (err.name === 'TypeError' || err.message?.includes('fetch')) {
+      throw new Error('Network connection error.');
+    }
+    throw err;
+  }
+};
+
+export const loginDoctorApi = async (identifier, password) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/doctor/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ doctorId: identifier, loginIdentifier: identifier, password }),
+    });
+
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Doctor authentication failed');
+      return data;
+    }
+    throw new Error('Doctor authentication service returned invalid response.');
+  } catch (err) {
+    if (err.name === 'TypeError' || err.message?.includes('fetch')) {
+      throw new Error('Network connection error.');
+    }
+    throw err;
+  }
 };
 
 export const registerApi = async (userData) => {
@@ -42,6 +77,31 @@ export const registerApi = async (userData) => {
   if (!res.ok) throw new Error(data.message || 'Registration failed');
   return data;
 };
+
+
+
+export const sendOtpApi = async (phone) => {
+  const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+  return data;
+};
+
+export const otpLoginApi = async (phone, otp, role) => {
+  const res = await fetch(`${API_BASE_URL}/auth/otp-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, otp, role }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'OTP verification failed');
+  return data;
+};
+
 
 /**
  * Real Backend Doctors & Hospitals
@@ -130,7 +190,7 @@ export const askHospitalRagApi = async (hospitalName, query) => {
  */
 export const fetchAppointmentsApi = async (userId) => {
   const url = userId ? `${API_BASE_URL}/appointments?userId=${encodeURIComponent(userId)}` : `${API_BASE_URL}/appointments`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: getAuthHeader() });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to fetch appointments');
   return data.appointments || [];
@@ -139,7 +199,7 @@ export const fetchAppointmentsApi = async (userId) => {
 export const createAppointmentApi = async (appointmentData) => {
   const res = await fetch(`${API_BASE_URL}/appointments`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify(appointmentData),
   });
   const data = await res.json();
@@ -154,16 +214,62 @@ export const cancelAppointmentApi = async (id) => {
   return data;
 };
 
-export const fetchQueueStatusApi = async (doctorId, doctorName) => {
-  const url = `${API_BASE_URL}/appointments/queue-status?doctorId=${encodeURIComponent(doctorId || '')}&doctorName=${encodeURIComponent(doctorName || '')}`;
-  const res = await fetch(url);
+export const fetchQueueStatusApi = async (doctorId, doctorName, date = '', timeSlot = '', appointmentId = '') => {
+  const params = new URLSearchParams();
+  if (doctorId) params.append('doctorId', doctorId);
+  if (doctorName) params.append('doctorName', doctorName);
+  if (date) params.append('date', date);
+  if (timeSlot) params.append('timeSlot', timeSlot);
+  if (appointmentId) params.append('appointmentId', appointmentId);
+
+  const url = `${API_BASE_URL}/appointments/queue-status?${params.toString()}`;
+  const res = await fetch(url, { headers: getAuthHeader() });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to fetch queue status');
-  return data.queueStatus;
+  return data;
 };
 
+export const updateQueueStatusApi = async (appointmentId, status, notes = '') => {
+  const res = await fetch(`${API_BASE_URL}/doctor/update-queue-status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify({ appointmentId, status, notes }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to update queue status');
+  return data;
+};
+
+export const addDoctorByHospitalApi = async (doctorData) => {
+  const res = await fetch(`${API_BASE_URL}/doctor/hospital/add-doctor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(doctorData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to add doctor account');
+  return data;
+};
+
+export const fetchSlotCountsApi = async (doctorId, doctorName, date) => {
+  const url = `${API_BASE_URL}/appointments/slot-counts?doctorId=${encodeURIComponent(doctorId || '')}&doctorName=${encodeURIComponent(doctorName || '')}&date=${encodeURIComponent(date || '')}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch slot counts');
+  return data;
+};
+
+export const fetchLiveQueueApi = async (doctorId, doctorName, date) => {
+  const url = `${API_BASE_URL}/appointments/live-queue?doctorId=${encodeURIComponent(doctorId || '')}&doctorName=${encodeURIComponent(doctorName || '')}&date=${encodeURIComponent(date || '')}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch live queue');
+  return data.queue || [];
+};
+
+
 /**
- * Real Backend Medical Reports (Filtered by User ID)
+ * Real Backend Medical Reports Pipeline
  */
 export const fetchReportsApi = async (userId) => {
   const url = userId ? `${API_BASE_URL}/reports?userId=${encodeURIComponent(userId)}` : `${API_BASE_URL}/reports`;
@@ -181,6 +287,32 @@ export const createReportApi = async (reportData) => {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to create report');
+  return data.report;
+};
+
+export const analyzeReportApi = async (formDataOrFile) => {
+  let body;
+  let headers = {};
+
+  if (formDataOrFile instanceof FormData) {
+    body = formDataOrFile;
+  } else if (formDataOrFile instanceof File) {
+    const fd = new FormData();
+    fd.append('file', formDataOrFile);
+    body = fd;
+  } else {
+    body = JSON.stringify(formDataOrFile);
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const res = await fetch(`${API_BASE_URL}/reports/analyze`, {
+    method: 'POST',
+    headers,
+    body,
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Report analysis pipeline failed');
   return data.report;
 };
 
@@ -286,3 +418,118 @@ export const fetchAdminAnalyticsApi = async () => {
   if (!res.ok) throw new Error(data.message || 'Failed to fetch admin analytics');
   return data.analytics;
 };
+
+/**
+ * Real Backend Doctor Dashboard APIs (JWT Isolated)
+ */
+const getAuthHeader = () => {
+  try {
+    const rawToken = localStorage.getItem('medconnect_token');
+    if (rawToken) return { 'Authorization': `Bearer ${rawToken}` };
+
+    const authUserStr = localStorage.getItem('medconnect_auth_user') || localStorage.getItem('medconnect_user');
+    if (authUserStr) {
+      const user = JSON.parse(authUserStr);
+      if (user.token) return { 'Authorization': `Bearer ${user.token}` };
+    }
+  } catch (e) {}
+  return {};
+};
+
+export const createDoctorByHospitalApi = async (docData) => {
+  const res = await fetch(`${API_BASE_URL}/doctor/hospital/add-doctor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(docData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to create doctor account');
+  return data.doctor;
+};
+
+export const fetchDoctorMeApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/me`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to authenticate doctor profile');
+  return data;
+};
+
+export const fetchDoctorAppointmentsTodayApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/appointments/today`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch today doctor appointments');
+  return data.appointments || [];
+};
+
+export const fetchDoctorOverviewApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/overview`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch doctor overview');
+  return data.stats;
+};
+
+export const fetchDoctorAppointmentsApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/appointments`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch doctor appointments');
+  return data.appointments || [];
+};
+
+export const fetchDoctorPatientsApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/patients`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch doctor patients');
+  return data.patients || [];
+};
+
+export const fetchDoctorReportsApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/reports`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch doctor reports');
+  return data.reports || [];
+};
+
+export const fetchDoctorPrescriptionsApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/prescriptions`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch doctor prescriptions');
+  return data.prescriptions || [];
+};
+
+export const createDoctorPrescriptionApi = async (rxData) => {
+  const res = await fetch(`${API_BASE_URL}/doctor/prescriptions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(rxData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to create prescription');
+  return data.prescription;
+};
+
+export const fetchDoctorProfileApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/profile`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch doctor profile');
+  return data.profile;
+};
+
+export const fetchDoctorQueueDashboardApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/doctor/queue-dashboard`, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch doctor queue dashboard');
+  return data;
+};
+
+export const updateAppointmentStatusApi = async (id, status) => {
+  const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify({ status }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to update appointment status');
+  return data;
+};
+
+

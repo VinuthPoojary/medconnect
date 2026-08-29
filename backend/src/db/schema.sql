@@ -5,34 +5,57 @@
 -- Enable UUID extension if needed
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Users Table
+-- 1. Patients Table (Dedicated Table for Patient Users)
+CREATE TABLE IF NOT EXISTS patients (
+  id VARCHAR(100) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  phone VARCHAR(50) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  abha_id VARCHAR(100),
+  avatar VARCHAR(10),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Legacy/Unified Users Table
 CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(100) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   phone VARCHAR(50) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'patient', -- 'patient', 'doctor', 'hospital', 'admin'
+  role VARCHAR(50) NOT NULL DEFAULT 'patient',
   abha_id VARCHAR(100),
   avatar VARCHAR(10),
+  hospital_id VARCHAR(100),
   hospital_name VARCHAR(255),
   specialization VARCHAR(255),
+  qualification VARCHAR(255),
+  experience VARCHAR(50),
+  license_number VARCHAR(100),
   mfa_enabled BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Doctors Table
+-- 2. Doctors Table (Dedicated Table for Doctor Accounts)
 CREATE TABLE IF NOT EXISTS doctors (
   id VARCHAR(100) PRIMARY KEY,
+  user_id VARCHAR(100) UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  phone VARCHAR(50) UNIQUE,
+  password_hash VARCHAR(255),
   photo TEXT,
   specialization VARCHAR(255) NOT NULL,
   experience VARCHAR(50),
+  qualification VARCHAR(255),
+  license_number VARCHAR(100),
+  hospital_id VARCHAR(100),
+  hospital_name VARCHAR(255),
   rating NUMERIC(3, 2) DEFAULT 4.8,
   reviews_count INT DEFAULT 50,
   languages TEXT[],
   available_slots TEXT[],
-  hospital_name VARCHAR(255),
   location VARCHAR(255),
   distance VARCHAR(50),
   consultation_fee INT DEFAULT 500,
@@ -42,14 +65,27 @@ CREATE TABLE IF NOT EXISTS doctors (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Hospitals Table
+-- 3. Hospitals Table (Dedicated Table for Hospital Admin Accounts)
 CREATE TABLE IF NOT EXISTS hospitals (
   id VARCHAR(100) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  phone VARCHAR(50) UNIQUE,
+  password_hash VARCHAR(255),
   banner TEXT,
   location VARCHAR(255) NOT NULL,
   distance VARCHAR(50),
   rating NUMERIC(3, 2) DEFAULT 4.8,
+  departments TEXT[],
+  doctors_count INT DEFAULT 100,
+  beds_available INT DEFAULT 25,
+  emergency_status VARCHAR(50) DEFAULT 'Available',
+  facilities TEXT[],
+  reviews_count INT DEFAULT 300,
+  approved BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
   departments TEXT[],
   doctors_count INT DEFAULT 100,
   beds_available INT DEFAULT 25,
@@ -80,6 +116,10 @@ CREATE TABLE IF NOT EXISTS appointments (
   meeting_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_appointments_doctor_date_slot ON appointments (doctor_id, date, time_slot, status, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_appointments_doctor_date ON appointments (doctor_id, date, status, created_at ASC);
+
 
 -- 5. Medical Reports Table
 CREATE TABLE IF NOT EXISTS medical_reports (
@@ -146,6 +186,20 @@ CREATE TABLE IF NOT EXISTS hospital_schemes (
   content_text TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 10. Prescriptions Table
+CREATE TABLE IF NOT EXISTS prescriptions (
+  id VARCHAR(100) PRIMARY KEY,
+  doctor_id VARCHAR(100) NOT NULL,
+  doctor_name VARCHAR(255) NOT NULL,
+  patient_id VARCHAR(100) NOT NULL,
+  patient_name VARCHAR(255) NOT NULL,
+  medications TEXT NOT NULL,
+  instructions TEXT,
+  date VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 
 -- Initial Seed Users
 INSERT INTO users (id, name, email, phone, password_hash, role, abha_id, avatar)
