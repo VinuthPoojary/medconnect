@@ -139,29 +139,40 @@ export const AppProvider = ({ children }) => {
     }
   }, [currentUser]);
 
-  // Check backend & Database health on load, then fetch live user-isolated data from REST APIs
+  // Fetch live user-isolated data whenever currentUser changes or on initial app load
   useEffect(() => {
+    // Fetch shared catalog
+    fetchDoctorsApi().then(docs => docs && docs.length && setDoctors(docs)).catch(() => {});
+    fetchHospitalsApi().then(hosps => hosps && hosps.length && setHospitals(hosps)).catch(() => {});
+    
+    // Check backend health
     checkBackendHealth().then(status => {
       setDbConnected(status.dbConnected);
-      if (status.isOnline && status.dbConnected) {
-        // Fetch shared catalog
-        fetchDoctorsApi().then(docs => docs && docs.length && setDoctors(docs)).catch(() => {});
-        fetchHospitalsApi().then(hosps => hosps && hosps.length && setHospitals(hosps)).catch(() => {});
-        
-        // Fetch strictly user-isolated data
-        if (currentUser?.id) {
-          fetchAppointmentsApi(currentUser.id).then(apts => setAppointments(apts || [])).catch(() => setAppointments([]));
-          fetchReportsApi(currentUser.id).then(reps => setReports(reps || [])).catch(() => setReports([]));
-          fetchMedicinesApi(currentUser.id).then(meds => setMedicines(meds || [])).catch(() => setMedicines([]));
-          fetchNotificationsApi(currentUser.id).then(notifs => setNotifications(notifs || [])).catch(() => setNotifications([]));
-        } else {
-          setAppointments([]);
-          setReports([]);
-          setMedicines([]);
-          setNotifications([]);
-        }
-      }
-    });
+    }).catch(() => {});
+
+    // Fetch strictly user-isolated data directly from database
+    if (currentUser?.id) {
+      fetchAppointmentsApi(currentUser.id).then(apts => {
+        if (Array.isArray(apts)) setAppointments(apts);
+      }).catch(err => console.error('Failed to load appointments for user:', err));
+      
+      fetchReportsApi(currentUser.id).then(reps => {
+        if (Array.isArray(reps)) setReports(reps);
+      }).catch(() => {});
+      
+      fetchMedicinesApi(currentUser.id).then(meds => {
+        if (Array.isArray(meds)) setMedicines(meds);
+      }).catch(() => {});
+      
+      fetchNotificationsApi(currentUser.id).then(notifs => {
+        if (Array.isArray(notifs)) setNotifications(notifs);
+      }).catch(() => {});
+    } else {
+      setAppointments([]);
+      setReports([]);
+      setMedicines([]);
+      setNotifications([]);
+    }
   }, [currentUser?.id]);
 
   const setRole = (newRole) => {
@@ -178,7 +189,6 @@ export const AppProvider = ({ children }) => {
       setActiveView('landing');
     }
   };
-
 
   const login = async (phoneOrEmailInput, passInput, roleInput) => {
     try {
@@ -203,6 +213,16 @@ export const AppProvider = ({ children }) => {
           }
         } catch (e) {}
 
+        // Fetch real database appointments immediately upon login
+        try {
+          const userApts = await fetchAppointmentsApi(authenticatedUser.id);
+          if (Array.isArray(userApts)) {
+            setAppointments(userApts);
+          }
+        } catch (aptErr) {
+          console.warn('Initial appointment fetch warning:', aptErr.message);
+        }
+
         const loginNotif = {
           id: `notif-${Date.now()}`,
           title: 'Sign In Successful',
@@ -216,7 +236,6 @@ export const AppProvider = ({ children }) => {
       }
       return false;
     } catch (err) {
-      // Never bypass authentication errors or role mismatches!
       throw err;
     }
   };
@@ -327,11 +346,27 @@ export const AppProvider = ({ children }) => {
     return true;
   };
 
-  const quickDemoLogin = (userRole) => {
-    const preset = DEMO_USERS[userRole] || DEMO_USERS.patient;
-    setCurrentUser(preset);
-    setIsAuthenticated(true);
-    setRole(preset.role);
+  const quickDemoLogin = async (userRole) => {
+    let email = 'patient@medconnect.com';
+    let password = 'Patient@2026';
+    if (userRole === 'doctor') {
+      email = 'doctor@medconnect.com';
+      password = 'Doctor@2026';
+    } else if (userRole === 'hospital') {
+      email = 'hospital@medconnect.com';
+      password = 'Hospital@2026';
+    } else if (userRole === 'admin') {
+      email = 'admin@medconnect.com';
+      password = 'Admin@2026';
+    }
+    try {
+      await login(email, password, userRole);
+    } catch (e) {
+      const preset = DEMO_USERS[userRole] || DEMO_USERS.patient;
+      setCurrentUser(preset);
+      setIsAuthenticated(true);
+      setRole(preset.role);
+    }
   };
 
   const registerUser = async (name, email, phone, abhaId, password, otp, roleInput = 'patient') => {
@@ -352,27 +387,16 @@ export const AppProvider = ({ children }) => {
         const assignedRole = res.user.role || roleInput;
         setRoleState(assignedRole);
         setRole(assignedRole);
+        try {
+          localStorage.setItem('medconnect_auth_user', JSON.stringify(res.user));
+          if (res.user.token) {
+            localStorage.setItem('medconnect_token', res.user.token);
+          }
+        } catch (e) {}
         return res.user;
       }
     } catch (err) {
-      console.warn('Backend registration fallback to local state:', err.message);
-      const newUser = {
-        id: `user-reg-${Date.now()}`,
-        name,
-        email,
-        phone,
-        role: roleInput,
-        abhaId: abhaId || `91-${Math.floor(Math.random() * 8999 + 1000)}-${Math.floor(Math.random() * 8999 + 1000)}`,
-        avatar: name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'PA',
-        token: `jwt-token-registered-${Date.now()}`,
-        mfaEnabled: false,
-        lastLogin: 'Just now',
-      };
-      setCurrentUser(newUser);
-      setIsAuthenticated(true);
-      setRoleState(roleInput);
-      setRole(roleInput);
-      return newUser;
+      throw err;
     }
   };
 
@@ -412,38 +436,34 @@ export const AppProvider = ({ children }) => {
       patientName: currentPatientName,
     };
 
-    if (dbConnected) {
-      const res = await createAppointmentApi(aptData);
-      const savedApt = res?.appointment || res;
+    // Always persist to database via API
+    const res = await createAppointmentApi(aptData);
+    const savedApt = res?.appointment || res;
+
+    // Immediately reload verified appointments from database
+    try {
+      const freshApts = await fetchAppointmentsApi(currentUserId);
+      if (Array.isArray(freshApts) && freshApts.length > 0) {
+        setAppointments(freshApts);
+      } else if (savedApt) {
+        setAppointments(prev => [savedApt, ...prev.filter(a => a.id !== savedApt.id)]);
+      }
+    } catch (fetchErr) {
       if (savedApt) {
         setAppointments(prev => [savedApt, ...prev.filter(a => a.id !== savedApt.id)]);
-
-        const newNotif = {
-          id: `notif-${Date.now()}`,
-          title: 'Appointment Booked!',
-          message: `Your ${type === 'online' ? 'Online Video' : 'In-Person'} consultation with ${doc.name} on ${date} at ${timeSlot} has been confirmed. Token: #${savedApt.queueNumber || 1}`,
-          category: 'appointment',
-          timestamp: 'Just now',
-          read: false,
-        };
-        setNotifications(prev => [newNotif, ...prev]);
-        return savedApt;
       }
-      return res;
-    } else {
-      const calculatedQueueNumber = 1;
-      const optimisticApt = {
-        id: `apt-${Date.now()}`,
-        ...aptData,
-        queueNumber: calculatedQueueNumber,
-        estimatedWaitTime: 'Immediate (~2 mins)',
-        status: 'waiting',
-        meetingUrl: type === 'online' ? `https://medconnect.karavali.ai/telehealth/room-${Math.floor(Math.random() * 8999 + 1000)}` : undefined,
-        createdAt: new Date().toISOString(),
-      };
-      setAppointments(prev => [optimisticApt, ...prev.filter(a => a.id !== optimisticApt.id)]);
-      return optimisticApt;
     }
+
+    const newNotif = {
+      id: `notif-${Date.now()}`,
+      title: 'Appointment Booked!',
+      message: `Your ${type === 'online' ? 'Online Video' : 'In-Person'} consultation with ${doc.name} on ${date} at ${timeSlot} has been confirmed. Token: #${savedApt?.queueNumber || 1}`,
+      category: 'appointment',
+      timestamp: 'Just now',
+      read: false,
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+    return savedApt;
   };
 
   const cancelAppointment = async (id) => {
