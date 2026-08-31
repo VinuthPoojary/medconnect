@@ -402,15 +402,28 @@ export const markNotificationReadApi = async (id) => {
 /**
  * Real Backend AI Triage & Gemini Chat
  */
-export const checkSymptomsApi = async (symptoms, duration, severity) => {
+export const checkSymptomsApi = async (inputData, duration = '1-3 days', severity = 'moderate') => {
+  const payload = typeof inputData === 'string'
+    ? { symptoms: inputData, duration, severity }
+    : inputData;
+
   const res = await fetch(`${API_BASE_URL}/ai/symptoms`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ symptoms, duration, severity }),
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(payload),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'AI Triage service failed');
   return data.triageResult;
+};
+
+export const fetchSymptomHistoryApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/ai/symptom-history`, {
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch symptom history');
+  return data.history || [];
 };
 
 export const chatWithAiApi = async (message, chatHistory = []) => {
