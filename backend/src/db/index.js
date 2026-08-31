@@ -1726,7 +1726,7 @@ async function initDb() {
       const tempPool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 3000,
+        connectionTimeoutMillis: 10000,
       });
       const client = await tempPool.connect();
       await client.query('SELECT 1');
