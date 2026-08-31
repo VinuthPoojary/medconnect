@@ -4,6 +4,7 @@ import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { Footer } from './components/common/Footer';
 import { EmergencyModal } from './components/ui/EmergencyModal';
+import { SignOutConfirmModal } from './components/ui/SignOutConfirmModal';
 
 // Pages
 import { LandingPage } from './pages/landing/LandingPage';
@@ -153,6 +154,7 @@ const MainLayout = () => {
 
       <Footer />
       <EmergencyModal />
+      <SignOutConfirmModal />
     </div>
   );
 };

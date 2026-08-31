@@ -113,6 +113,11 @@ export const AppProvider = ({ children }) => {
   const [bookingDoctor, setBookingDoctor] = useState(null);
   const [telehealthAppointment, setTelehealthAppointment] = useState(null);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
+
+  const requestSignOut = () => {
+    setIsSignOutModalOpen(true);
+  };
 
   // Synchronize patientProfile & localStorage with logged in currentUser
   useEffect(() => {
@@ -598,6 +603,9 @@ export const AppProvider = ({ children }) => {
         setTelehealthAppointment,
         isEmergencyModalOpen,
         setIsEmergencyModalOpen,
+        isSignOutModalOpen,
+        setIsSignOutModalOpen,
+        requestSignOut,
         bookAppointment,
         cancelAppointment,
         toggleMedicine,

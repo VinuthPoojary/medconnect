@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { HeartPulse, Search, PhoneCall, LogIn, LogOut, Menu, X, Sparkles, Activity, ShieldCheck, User } from 'lucide-react';
 
 export const Header = () => {
-  const { role, activeView, setActiveView, notifications, setIsEmergencyModalOpen, currentUser, isAuthenticated, logout } = useApp();
+  const { role, activeView, setActiveView, notifications, setIsEmergencyModalOpen, currentUser, isAuthenticated, requestSignOut } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,7 +133,7 @@ export const Header = () => {
               </button>
 
               <button
-                onClick={logout}
+                onClick={requestSignOut}
                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
                 title="Sign Out"
               >
@@ -211,7 +211,7 @@ export const Header = () => {
 
           <div className="pt-2 flex items-center justify-between border-t border-slate-100">
             {isAuthenticated ? (
-              <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="text-xs font-extrabold text-rose-600">
+              <button onClick={() => { requestSignOut(); setMobileMenuOpen(false); }} className="text-xs font-extrabold text-rose-600">
                 Sign Out
               </button>
             ) : (
