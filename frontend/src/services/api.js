@@ -269,11 +269,11 @@ export const fetchLiveQueueApi = async (doctorId, doctorName, date) => {
 
 
 /**
- * Real Backend Medical Reports Pipeline
+ * Real Backend Medical Reports Pipeline (Supabase Storage & Zero-Hallucination AI)
  */
-export const fetchReportsApi = async (userId) => {
-  const url = userId ? `${API_BASE_URL}/reports?userId=${encodeURIComponent(userId)}` : `${API_BASE_URL}/reports`;
-  const res = await fetch(url);
+export const fetchReportsApi = async (patientId) => {
+  const url = patientId ? `${API_BASE_URL}/reports?patientId=${encodeURIComponent(patientId)}` : `${API_BASE_URL}/reports`;
+  const res = await fetch(url, { headers: getAuthHeader() });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to fetch reports');
   return data.reports || [];
@@ -282,7 +282,7 @@ export const fetchReportsApi = async (userId) => {
 export const createReportApi = async (reportData) => {
   const res = await fetch(`${API_BASE_URL}/reports`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: JSON.stringify(reportData),
   });
   const data = await res.json();
@@ -292,7 +292,7 @@ export const createReportApi = async (reportData) => {
 
 export const analyzeReportApi = async (formDataOrFile) => {
   let body;
-  let headers = {};
+  let headers = { ...getAuthHeader() };
 
   if (formDataOrFile instanceof FormData) {
     body = formDataOrFile;
@@ -316,8 +316,30 @@ export const analyzeReportApi = async (formDataOrFile) => {
   return data.report;
 };
 
+export const fetchReportSignedUrlApi = async (reportId) => {
+  const res = await fetch(`${API_BASE_URL}/reports/${reportId}/signed-url`, {
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to generate signed URL');
+  return data.signedUrl;
+};
+
+export const reanalyzeReportApi = async (reportId) => {
+  const res = await fetch(`${API_BASE_URL}/reports/${reportId}/reanalyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to re-analyze report');
+  return data;
+};
+
 export const deleteReportApi = async (id) => {
-  const res = await fetch(`${API_BASE_URL}/reports/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${API_BASE_URL}/reports/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeader(),
+  });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to delete report');
   return data;

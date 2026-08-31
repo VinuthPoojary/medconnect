@@ -124,16 +124,26 @@ CREATE INDEX IF NOT EXISTS idx_appointments_doctor_date ON appointments (doctor_
 -- 5. Medical Reports Table
 CREATE TABLE IF NOT EXISTS medical_reports (
   id VARCHAR(100) PRIMARY KEY,
+  patient_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   user_id VARCHAR(100) REFERENCES users(id) ON DELETE CASCADE,
-  title VARCHAR(255) NOT NULL,
-  category VARCHAR(100) NOT NULL,
-  date VARCHAR(50) NOT NULL,
+  file_name VARCHAR(255) NOT NULL,
+  file_path TEXT NOT NULL,
+  file_type VARCHAR(100) NOT NULL,
+  file_size BIGINT,
+  uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  analysis_status VARCHAR(50) DEFAULT 'pending',
+  extracted_data JSONB,
+  ai_summary TEXT,
+  recommended_specialty VARCHAR(255),
+  specialist_reason TEXT,
+  title VARCHAR(255),
+  category VARCHAR(100) DEFAULT 'General Lab Report',
+  date VARCHAR(50),
   doctor_name VARCHAR(255),
   status VARCHAR(50) DEFAULT 'Normal',
   summary TEXT,
   metrics TEXT,
   file_url TEXT,
-  file_type VARCHAR(50) DEFAULT 'pdf',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

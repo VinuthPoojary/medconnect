@@ -102,8 +102,8 @@ export const AppProvider = ({ children }) => {
   const [doctors, setDoctors] = useState(MOCK_DOCTORS);
   const [hospitals, setHospitals] = useState(MOCK_HOSPITALS);
   
-  // Isolate user personal data: New users start with 0 pre-built data
-  const [appointments, setAppointments] = useState(() => currentUser?.id === 'user-patient-1' ? MOCK_APPOINTMENTS : []);
+  // Isolate user personal data: database is the single source of truth
+  const [appointments, setAppointments] = useState([]);
   const [reports, setReports] = useState(() => currentUser?.id === 'user-patient-1' ? MOCK_REPORTS : []);
   const [medicines, setMedicines] = useState(() => currentUser?.id === 'user-patient-1' ? MOCK_MEDICINES : []);
   const [notifications, setNotifications] = useState(() => currentUser?.id === 'user-patient-1' ? MOCK_NOTIFICATIONS : []);
@@ -394,7 +394,7 @@ export const AppProvider = ({ children }) => {
   const bookAppointment = async (doctorId, date, timeSlot, type) => {
     const targetDocId = typeof doctorId === 'object' ? doctorId?.id : doctorId;
     const doc = (doctors || []).find(d => d.id === targetDocId || d.name === targetDocId) || (typeof doctorId === 'object' ? doctorId : null) || selectedDoctor;
-    if (!doc) return;
+    if (!doc) throw new Error('Selected doctor not found.');
 
     const currentUserId = currentUser?.id || 'user-patient-1';
     const currentPatientName = currentUser?.name || patientProfile.name || 'Patient';
@@ -405,54 +405,44 @@ export const AppProvider = ({ children }) => {
       doctorName: doc.name,
       doctorPhoto: doc.photo,
       specialization: doc.specialization,
-      hospitalName: doc.hospitalName || doc.hospital_name || 'Hospital',
+      hospitalName: doc.hospitalName || doc.hospital_name || 'KMC Hospital',
       date,
       timeSlot,
       type,
       patientName: currentPatientName,
     };
 
-    // Calculate real queue number from active appointments for this doctor & slot
-    const docAppts = (appointments || []).filter(
-      a => (a.doctorId === doc.id || a.doctorName === doc.name) && a.date === date && a.timeSlot === timeSlot && ['upcoming', 'booked', 'waiting', 'in_consultation'].includes(a.status?.toLowerCase())
-    );
-    const calculatedQueueNumber = docAppts.length + 1;
-    const patientsAhead = docAppts.length;
-    const calculatedWaitTime = patientsAhead > 0 ? `${patientsAhead * 10} mins` : '5 mins';
+    if (dbConnected) {
+      const res = await createAppointmentApi(aptData);
+      const savedApt = res?.appointment || res;
+      if (savedApt) {
+        setAppointments(prev => [savedApt, ...prev.filter(a => a.id !== savedApt.id)]);
 
-    const optimisticApt = {
-      id: `apt-${Date.now()}`,
-      ...aptData,
-      queueNumber: calculatedQueueNumber,
-      estimatedWaitTime: calculatedWaitTime,
-      status: 'upcoming',
-      meetingUrl: type === 'online' ? `https://medconnect.karavali.ai/telehealth/room-${Math.floor(Math.random() * 8999 + 1000)}` : undefined,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Update state immediately so it appears instantly in My Appointments
-    setAppointments(prev => [optimisticApt, ...prev.filter(a => a.id !== optimisticApt.id)]);
-
-
-    try {
-      if (dbConnected) {
-        const savedApt = await createAppointmentApi(aptData);
-        if (savedApt) {
-          setAppointments(prev => [savedApt, ...prev.filter(a => a.id !== optimisticApt.id && a.id !== savedApt.id)]);
-        }
+        const newNotif = {
+          id: `notif-${Date.now()}`,
+          title: 'Appointment Booked!',
+          message: `Your ${type === 'online' ? 'Online Video' : 'In-Person'} consultation with ${doc.name} on ${date} at ${timeSlot} has been confirmed. Token: #${savedApt.queueNumber || 1}`,
+          category: 'appointment',
+          timestamp: 'Just now',
+          read: false,
+        };
+        setNotifications(prev => [newNotif, ...prev]);
+        return savedApt;
       }
-
-      const newNotif = {
-        id: `notif-${Date.now()}`,
-        title: 'Appointment Booked!',
-        message: `Your ${type === 'online' ? 'Online Video' : 'In-Person'} consultation with ${doc.name} on ${date} at ${timeSlot} has been confirmed.`,
-        category: 'appointment',
-        timestamp: 'Just now',
-        read: false,
+      return res;
+    } else {
+      const calculatedQueueNumber = 1;
+      const optimisticApt = {
+        id: `apt-${Date.now()}`,
+        ...aptData,
+        queueNumber: calculatedQueueNumber,
+        estimatedWaitTime: 'Immediate (~2 mins)',
+        status: 'waiting',
+        meetingUrl: type === 'online' ? `https://medconnect.karavali.ai/telehealth/room-${Math.floor(Math.random() * 8999 + 1000)}` : undefined,
+        createdAt: new Date().toISOString(),
       };
-      setNotifications(prev => [newNotif, ...prev]);
-    } catch (e) {
-      console.error('Failed to save appointment in database:', e);
+      setAppointments(prev => [optimisticApt, ...prev.filter(a => a.id !== optimisticApt.id)]);
+      return optimisticApt;
     }
   };
 

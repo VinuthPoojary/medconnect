@@ -1,203 +1,379 @@
 import { createRequire } from 'module';
+import { GoogleGenAI } from '@google/genai';
+
 const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+let pdfParse;
+try {
+  const pdfModule = require('pdf-parse');
+  pdfParse = typeof pdfModule === 'function' ? pdfModule : (pdfModule?.default || pdfModule);
+} catch (e) {
+  console.warn('⚠️ pdf-parse module loading note:', e.message);
+}
+
+function getAiClient() {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (apiKey && !apiKey.includes('your-gemini-key')) {
+    try {
+      return new GoogleGenAI({ apiKey });
+    } catch (err) {
+      console.warn('⚠️ Google Gemini AI Initialization error:', err.message);
+    }
+  }
+  return null;
+}
 
 /**
- * Standard Clinical Reference Ranges Library
+ * Standard Clinical Reference Ranges Library (used for validation & reference)
  */
 export const CLINICAL_REFERENCE_RANGES = {
-  'Hemoglobin': { min: 13.5, max: 17.5, unit: 'g/dL', category: 'Hematology', specialty: 'Hematologist' },
-  'Hb': { min: 13.5, max: 17.5, unit: 'g/dL', category: 'Hematology', specialty: 'Hematologist' },
-  'TSH': { min: 0.4, max: 4.0, unit: 'mIU/L', category: 'Endocrinology', specialty: 'Endocrinologist' },
-  'Thyroid Stimulating Hormone': { min: 0.4, max: 4.0, unit: 'mIU/L', category: 'Endocrinology', specialty: 'Endocrinologist' },
-  'Fasting Blood Sugar': { min: 70, max: 99, unit: 'mg/dL', category: 'Endocrinology', specialty: 'Endocrinologist' },
-  'FBS': { min: 70, max: 99, unit: 'mg/dL', category: 'Endocrinology', specialty: 'Endocrinologist' },
-  'HbA1c': { min: 4.0, max: 5.6, unit: '%', category: 'Endocrinology', specialty: 'Endocrinologist' },
-  'Total Cholesterol': { min: 125, max: 200, unit: 'mg/dL', category: 'Cardiology', specialty: 'Cardiologist' },
-  'Cholesterol': { min: 125, max: 200, unit: 'mg/dL', category: 'Cardiology', specialty: 'Cardiologist' },
-  'Triglycerides': { min: 35, max: 150, unit: 'mg/dL', category: 'Cardiology', specialty: 'Cardiologist' },
-  'LDL Cholesterol': { min: 0, max: 100, unit: 'mg/dL', category: 'Cardiology', specialty: 'Cardiologist' },
-  'Serum Creatinine': { min: 0.7, max: 1.2, unit: 'mg/dL', category: 'Nephrology', specialty: 'Nephrologist' },
-  'Creatinine': { min: 0.7, max: 1.2, unit: 'mg/dL', category: 'Nephrology', specialty: 'Nephrologist' },
-  'Blood Urea': { min: 7, max: 20, unit: 'mg/dL', category: 'Nephrology', specialty: 'Nephrologist' },
-  'Platelet Count': { min: 150000, max: 450000, unit: '/µL', category: 'Hematology', specialty: 'Hematologist' },
-  'Platelets': { min: 150000, max: 450000, unit: '/µL', category: 'Hematology', specialty: 'Hematologist' },
-  'WBC Count': { min: 4000, max: 11000, unit: '/µL', category: 'Hematology', specialty: 'General Physician' },
-  'WBC': { min: 4000, max: 11000, unit: '/µL', category: 'Hematology', specialty: 'General Physician' },
-  'Total Bilirubin': { min: 0.2, max: 1.2, unit: 'mg/dL', category: 'Gastroenterology', specialty: 'Gastroenterologist' },
-  'SGPT / ALT': { min: 7, max: 56, unit: 'U/L', category: 'Gastroenterology', specialty: 'Gastroenterologist' },
-  'ALT': { min: 7, max: 56, unit: 'U/L', category: 'Gastroenterology', specialty: 'Gastroenterologist' },
-  'SGOT / AST': { min: 10, max: 40, unit: 'U/L', category: 'Gastroenterology', specialty: 'Gastroenterologist' },
-  'Uric Acid': { min: 3.5, max: 7.2, unit: 'mg/dL', category: 'Rheumatology', specialty: 'General Physician' },
+  // Complete Blood Count (CBC) & Hematology
+  'Hemoglobin': { aliases: ['hb', 'hgb', 'hemoglobin'], min: 13.0, max: 18.0, unit: 'g/dL', category: 'Hematology', specialty: 'Hematologist' },
+  'Total RBC': { aliases: ['rbc', 'total rbc', 'rbc count', 'red blood cells', 'red blood cell count'], min: 4.5, max: 6.5, unit: '×10¹²/L', category: 'Hematology', specialty: 'Hematologist' },
+  'Hematocrit': { aliases: ['hct', 'pcv', 'packed cell volume', 'hematocrit'], min: 40.0, max: 54.0, unit: '%', category: 'Hematology', specialty: 'Hematologist' },
+  'MCV': { aliases: ['mcv', 'mean corpuscular volume'], min: 80.0, max: 100.0, unit: 'fL', category: 'Hematology', specialty: 'Hematologist' },
+  'MCH': { aliases: ['mch', 'mean corpuscular hemoglobin'], min: 27.0, max: 32.0, unit: 'pg', category: 'Hematology', specialty: 'Hematologist' },
+  'MCHC': { aliases: ['mchc', 'mean corpuscular hemoglobin concentration'], min: 32.0, max: 36.0, unit: 'g/dL', category: 'Hematology', specialty: 'Hematologist' },
+  'RDW': { aliases: ['rdw', 'rdw-cv', 'red cell distribution width'], min: 11.5, max: 14.5, unit: '%', category: 'Hematology', specialty: 'Hematologist' },
+  'Platelet Count': { aliases: ['platelet', 'platelets', 'platelet count', 'plt'], min: 150.0, max: 450.0, unit: '×10⁹/L', category: 'Hematology', specialty: 'Hematologist' },
+  'Total WBC': { aliases: ['wbc', 'total wbc', 'wbc count', 'tlc', 'total leucocyte count', 'white blood cells'], min: 4.0, max: 11.0, unit: '×10⁹/L', category: 'Hematology', specialty: 'Hematologist' },
+  'Neutrophils': { aliases: ['neutrophils', 'polymorphs', 'segs', 'segmented neutrophils'], min: 40.0, max: 75.0, unit: '%', category: 'Hematology', specialty: 'Hematologist' },
+  'Lymphocytes': { aliases: ['lymphocytes', 'lymphs'], min: 20.0, max: 45.0, unit: '%', category: 'Hematology', specialty: 'Hematologist' },
+  'Monocytes': { aliases: ['monocytes', 'monos'], min: 2.0, max: 10.0, unit: '%', category: 'Hematology', specialty: 'Hematologist' },
+  'Eosinophils': { aliases: ['eosinophils', 'eos'], min: 1.0, max: 6.0, unit: '%', category: 'Hematology', specialty: 'Hematologist' },
+  'Basophils': { aliases: ['basophils', 'baso'], min: 0.0, max: 1.0, unit: '%', category: 'Hematology', specialty: 'Hematologist' },
+  'ESR': { aliases: ['esr', 'erythrocyte sedimentation rate'], min: 0.0, max: 20.0, unit: 'mm/hr', category: 'Hematology', specialty: 'General Physician' },
+
+  // Endocrinology & Diabetes
+  'Fasting Blood Sugar': { aliases: ['fasting blood sugar', 'fbs', 'fasting glucose', 'fasting blood glucose'], min: 70.0, max: 99.0, unit: 'mg/dL', category: 'Endocrinology', specialty: 'Endocrinologist' },
+  'Postprandial Blood Sugar': { aliases: ['postprandial blood sugar', 'ppbs', 'pp glucose', 'post prandial blood sugar'], min: 70.0, max: 140.0, unit: 'mg/dL', category: 'Endocrinology', specialty: 'Endocrinologist' },
+  'HbA1c': { aliases: ['hba1c', 'glycated hemoglobin', 'glycosylated hemoglobin'], min: 4.0, max: 5.6, unit: '%', category: 'Endocrinology', specialty: 'Endocrinologist' },
+  'TSH': { aliases: ['tsh', 'thyroid stimulating hormone', 'tsh (thyroid)'], min: 0.4, max: 4.2, unit: 'mIU/L', category: 'Endocrinology', specialty: 'Endocrinologist' },
+  'Free T3': { aliases: ['free t3', 'ft3'], min: 2.3, max: 4.2, unit: 'pg/mL', category: 'Endocrinology', specialty: 'Endocrinologist' },
+  'Free T4': { aliases: ['free t4', 'ft4'], min: 0.8, max: 1.8, unit: 'ng/dL', category: 'Endocrinology', specialty: 'Endocrinologist' },
+
+  // Renal / Kidney Function
+  'Serum Creatinine': { aliases: ['serum creatinine', 'creatinine', 'sr. creatinine'], min: 0.7, max: 1.2, unit: 'mg/dL', category: 'Nephrology', specialty: 'Nephrologist' },
+  'Blood Urea': { aliases: ['blood urea', 'urea', 'blood urea nitrogen', 'bun'], min: 7.0, max: 20.0, unit: 'mg/dL', category: 'Nephrology', specialty: 'Nephrologist' },
+  'Uric Acid': { aliases: ['uric acid', 'serum uric acid'], min: 3.5, max: 7.2, unit: 'mg/dL', category: 'Nephrology', specialty: 'Nephrologist' },
+
+  // Lipid / Cardiology
+  'Total Cholesterol': { aliases: ['total cholesterol', 'cholesterol', 'serum cholesterol'], min: 125.0, max: 200.0, unit: 'mg/dL', category: 'Cardiology', specialty: 'Cardiologist' },
+  'Triglycerides': { aliases: ['triglycerides', 'serum triglycerides', 'tg'], min: 35.0, max: 150.0, unit: 'mg/dL', category: 'Cardiology', specialty: 'Cardiologist' },
+  'HDL Cholesterol': { aliases: ['hdl', 'hdl cholesterol', 'good cholesterol'], min: 40.0, max: 60.0, unit: 'mg/dL', category: 'Cardiology', specialty: 'Cardiologist' },
+  'LDL Cholesterol': { aliases: ['ldl', 'ldl cholesterol', 'bad cholesterol'], min: 0.0, max: 100.0, unit: 'mg/dL', category: 'Cardiology', specialty: 'Cardiologist' },
+
+  // Liver Function
+  'Total Bilirubin': { aliases: ['total bilirubin', 'bilirubin total', 's. bilirubin'], min: 0.2, max: 1.2, unit: 'mg/dL', category: 'Gastroenterology', specialty: 'Gastroenterologist' },
+  'SGPT / ALT': { aliases: ['sgpt', 'alt', 'alanine aminotransferase', 'sgpt / alt'], min: 7.0, max: 56.0, unit: 'U/L', category: 'Gastroenterology', specialty: 'Gastroenterologist' },
+  'SGOT / AST': { aliases: ['sgot', 'ast', 'aspartate aminotransferase', 'sgot / ast'], min: 10.0, max: 40.0, unit: 'U/L', category: 'Gastroenterology', specialty: 'Gastroenterologist' },
 };
 
 /**
- * Stage 1 & 2: OCR / Extraction (Zero LLM involved)
- * Parses file buffer (PDF or Image/Text) into raw string content
+ * Stage 1: Image / PDF Vision OCR Extraction
+ * Extracts ONLY visually present parameters from the uploaded document.
+ * ABSOLUTE RULE: Zero Hallucination. Never generate tests not present in document.
  */
-export const extractTextFromFile = async (fileBuffer, mimeType, filename = '') => {
-  try {
-    if (mimeType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
-      const parsed = await pdfParse(fileBuffer);
-      return parsed.text || '';
-    } else {
-      // For text or non-PDF image uploads, extract ASCII / UTF-8 string sequences
-      const strContent = fileBuffer.toString('utf-8');
-      // Clean non-printable bytes
-      return strContent.replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+export const extractStructuredMedicalDataFromVisionOrPdf = async (fileBuffer, mimeType, filename = '') => {
+  const client = getAiClient();
+  const isBinaryPdf = fileBuffer && fileBuffer.length >= 5 && fileBuffer.slice(0, 5).toString('ascii').startsWith('%PDF-');
+  const isImage = (mimeType && mimeType.startsWith('image/')) || /\.(jpg|jpeg|png|webp|bmp|tiff)$/i.test(filename);
+  const isPdf = isBinaryPdf || (mimeType === 'application/pdf' && isBinaryPdf);
+
+  // 1. Try Gemini Vision / Multimodal Extraction if available
+  if (client && fileBuffer && fileBuffer.length > 0) {
+    try {
+      const base64Data = fileBuffer.toString('base64');
+      let contentsPayload;
+
+      const visionPrompt = `
+You are an expert Clinical Document Extraction Engine for MedConnect Karavali.
+Carefully examine the medical lab report document.
+
+CRITICAL INSTRUCTIONS — ZERO HALLUCINATION POLICY:
+1. Extract ONLY the test parameters, measured values, units, and reference ranges that are ACTUALLY VISIBLE and PRINTED in this document.
+2. Under NO circumstance should you invent, assume, or fabricate any test (for example, NEVER add Fasting Blood Sugar, Creatinine, or TSH unless that exact test appears in this document).
+3. If a parameter is visible (e.g. Hb 8.8, RBC 3.0, Hct 26, MCV 85, MCH 29, MCHC 34, Platelet 199, WBC 23.9, Neutrophils 91, Lymphocytes 6, Monocytes 2, Eosinophils 1), extract the exact numerical value and unit printed.
+4. Extract patient metadata (name, age, sex, report date, laboratory/hospital name) if printed.
+5. If a test value is unreadable or blurry, mark status as "unreadable" with confidence 0.
+
+Output a valid JSON object strictly matching this schema:
+{
+  "patient": {
+    "name": "string or null",
+    "age": "string or number or null",
+    "sex": "Male" | "Female" | "Other" | null
+  },
+  "report": {
+    "title": "string (e.g. Complete Blood Count / Hematology Report)",
+    "date": "YYYY-MM-DD or string or null",
+    "category": "Hematology" | "Endocrinology" | "Cardiology" | "Nephrology" | "Gastroenterology" | "General Health",
+    "laboratory": "string or null"
+  },
+  "tests": [
+    {
+      "name": "Exact test name printed (e.g. Hemoglobin)",
+      "value": "8.8 g/dL",
+      "numericValue": 8.8,
+      "unit": "g/dL",
+      "referenceRange": "13.0 - 18.0",
+      "refMin": 13.0,
+      "refMax": 18.0,
+      "status": "Low" | "Normal" | "High" | "Abnormal" | "Unreadable",
+      "confidence": 0.98,
+      "sourceEvidence": "Exact printed text snippet"
     }
-  } catch (error) {
-    console.error('Error during OCR/PDF text extraction:', error.message);
-    return '';
+  ]
+}
+
+Return ONLY the valid JSON object.
+`;
+
+      if (isImage || isBinaryPdf) {
+        const docMime = isBinaryPdf ? 'application/pdf' : (mimeType || 'image/jpeg');
+        contentsPayload = [
+          {
+            inlineData: {
+              mimeType: docMime,
+              data: base64Data,
+            },
+          },
+          visionPrompt,
+        ];
+      } else {
+        // Plain text report buffer
+        const textContent = fileBuffer.toString('utf-8');
+        contentsPayload = `${visionPrompt}\n\n[DOCUMENT CONTENT]\n${textContent}`;
+      }
+
+      const response = await client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: contentsPayload,
+      });
+
+      const rawText = response.text;
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed && Array.isArray(parsed.tests) && parsed.tests.length > 0) {
+          return {
+            source: isImage || isBinaryPdf ? 'gemini_vision' : 'gemini_text_extraction',
+            patient: parsed.patient || {},
+            report: parsed.report || {},
+            tests: parsed.tests.map(t => ({
+              name: t.name,
+              value: t.value || `${t.numericValue} ${t.unit || ''}`.trim(),
+              numericValue: typeof t.numericValue === 'number' ? t.numericValue : parseFloat(t.value),
+              unit: t.unit || '',
+              referenceRange: t.referenceRange || '',
+              refMin: t.refMin,
+              refMax: t.refMax,
+              status: t.status || 'Normal',
+              confidence: t.confidence || 0.95,
+              sourceEvidence: t.sourceEvidence || `${t.name}: ${t.value}`,
+            })),
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Gemini Extraction note:', err.message);
+    }
   }
+
+  // 2. Deterministic Local Parsing (for Text PDFs or string extraction)
+  let rawText = '';
+  try {
+    if (isBinaryPdf && pdfParse) {
+      const parsedPdf = await pdfParse(fileBuffer);
+      rawText = parsedPdf.text || '';
+    } else if (fileBuffer) {
+      rawText = fileBuffer.toString('utf-8');
+    }
+  } catch (e) {
+    console.error('Error decoding text buffer:', e.message);
+    rawText = fileBuffer ? fileBuffer.toString('utf-8') : '';
+  }
+
+  return parseDeterministicText(rawText, filename);
 };
 
 /**
- * Stage 3: Structured Medical Data Extraction
- * Extracts Metadata and Lab/Test Biomarkers from raw extracted text
+ * Deterministic Line-by-Line Medical Text Parser
+ * Extracts ONLY matches actually present in the text. NEVER adds synthetic mock parameters.
  */
-export const parseStructuredMedicalData = (rawText, filename = '') => {
-  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+function parseDeterministicText(rawText, filename = '') {
+  const lines = (rawText || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const foundTests = [];
+  const processedNames = new Set();
 
-  // Metadata Extraction
   let patientName = 'Patient';
-  let labName = 'Diagnostic Clinical Laboratory';
+  let labName = 'Diagnostic Laboratory';
   let reportDate = new Date().toISOString().split('T')[0];
-  let category = 'General Health Report';
+  let category = 'Hematology & General Lab Report';
 
+  // Extract Metadata
   for (const line of lines) {
     if (/patient\s*name|name\s*:/i.test(line)) {
-      const match = line.match(/(?:patient\s*name|name)\s*[:\-]\s*([A-Za-z\s.]+)/i);
-      if (match && match[1]) patientName = match[1].trim();
-    }
-    if (/lab|hospital|clinic|diagnostic|pathology/i.test(line) && labName === 'Diagnostic Clinical Laboratory') {
-      labName = line.slice(0, 60);
+      const m = line.match(/(?:patient\s*name|name)\s*[:\-]\s*([A-Za-z\s.]+)/i);
+      if (m && m[1]) patientName = m[1].trim();
     }
     if (/date\s*[:\-]\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/i.test(line)) {
-      const match = line.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/);
-      if (match) reportDate = match[1];
+      const m = line.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/);
+      if (m && m[1]) reportDate = m[1];
+    }
+    if (/lab|hospital|clinic|diagnostic|pathology/i.test(line) && labName === 'Diagnostic Laboratory') {
+      labName = line.slice(0, 60);
     }
   }
 
-  // Parameter Extraction via Regex & Pattern Matching
-  const importantValues = [];
-  const processedKeys = new Set();
+  // Scan against standard reference ranges
+  for (const [stdName, info] of Object.entries(CLINICAL_REFERENCE_RANGES)) {
+    if (processedNames.has(stdName)) continue;
 
-  // 1. Search line by line for known medical biomarkers
-  for (const [key, meta] of Object.entries(CLINICAL_REFERENCE_RANGES)) {
-    if (processedKeys.has(key)) continue;
+    for (const alias of info.aliases) {
+      // Regex looking for: alias [separator] number [unit] [reference range]
+      const regex = new RegExp(`(?:^|\\b)${alias}\\b[^0-9\\n\\r]{0,30}?([0-9]+\\.?[0-9]*)(?:\\s*([a-zA-Z%µ¹²³×\\/\\^]+))?(?:[^0-9\\n\\r]{0,15}?([0-9]+\\.?[0-9]*)\\s*[-–~至to]\\s*([0-9]+\\.?[0-9]*))?`, 'i');
+      const match = rawText.match(regex);
 
-    const regex = new RegExp(`${key}\\s*[:\\-=]?\\s*([0-9]+\\.?[0-9]*)`, 'i');
-    const match = rawText.match(regex);
+      if (match && match[1]) {
+        const valNum = parseFloat(match[1]);
+        if (!isNaN(valNum)) {
+          processedNames.add(stdName);
+          const detectedUnit = match[2] ? match[2].trim() : info.unit;
+          const repMin = match[3] ? parseFloat(match[3]) : info.min;
+          const repMax = match[4] ? parseFloat(match[4]) : info.max;
 
-    if (match) {
-      const valNum = parseFloat(match[1]);
-      if (!isNaN(valNum)) {
-        processedKeys.add(key);
-        category = meta.category;
-        importantValues.push({
-          label: key,
-          value: `${valNum} ${meta.unit}`,
-          numericValue: valNum,
-          unit: meta.unit,
-          refMin: meta.min,
-          refMax: meta.max,
-          status: valNum >= meta.min && valNum <= meta.max ? 'Normal' : (valNum < meta.min ? 'Low' : 'High'),
-        });
+          let status = 'Normal';
+          if (repMin !== undefined && valNum < repMin) status = 'Low';
+          if (repMax !== undefined && valNum > repMax) status = 'High';
+
+          foundTests.push({
+            name: stdName,
+            value: `${valNum} ${detectedUnit}`,
+            numericValue: valNum,
+            unit: detectedUnit,
+            referenceRange: `${repMin} - ${repMax}`,
+            refMin: repMin,
+            refMax: repMax,
+            status,
+            confidence: 0.92,
+            sourceEvidence: match[0].trim(),
+          });
+          break;
+        }
       }
     }
   }
 
-  // 2. Generic Tabular Regex Extraction for unlisted parameters (e.g., "Parameter Name 12.4 g/dL (10-15)")
-  const genericTabularRegex = /([A-Za-z\s]{3,30})\s+([0-9]+\.?[0-9]*)\s+([A-Za-z\/%µ]+)\s+(?:\(?\s*([0-9]+\.?[0-9]*)\s*[\-\–\~]\s*([0-9]+\.?[0-9]*)\s*\)?)/g;
-  let genericMatch;
-  while ((genericMatch = genericTabularRegex.exec(rawText)) !== null) {
-    const label = genericMatch[1].trim();
-    const valNum = parseFloat(genericMatch[2]);
-    const unit = genericMatch[3].trim();
-    const minVal = parseFloat(genericMatch[4]);
-    const maxVal = parseFloat(genericMatch[5]);
-
-    if (!processedKeys.has(label) && label.length > 3 && !isNaN(valNum)) {
-      processedKeys.add(label);
-      const isNormal = isNaN(minVal) || isNaN(maxVal) ? true : (valNum >= minVal && valNum <= maxVal);
-      importantValues.push({
-        label,
-        value: `${valNum} ${unit}`,
-        numericValue: valNum,
-        unit,
-        refMin: minVal,
-        refMax: maxVal,
-        status: isNormal ? 'Normal' : (valNum < minVal ? 'Low' : 'High'),
-      });
-    }
-  }
-
-  // 3. Robust Fallback Dataset if PDF text is scanned/unstructured or demo report
-  if (importantValues.length === 0) {
-    // Generate realistic standard parameters based on document title / filename
-    const lowerFn = filename.toLowerCase();
-    if (lowerFn.includes('thyroid') || rawText.toLowerCase().includes('thyroid')) {
-      category = 'Endocrinology';
-      importantValues.push(
-        { label: 'TSH (Thyroid)', value: '6.4 mIU/L', numericValue: 6.4, unit: 'mIU/L', refMin: 0.4, refMax: 4.0, status: 'High' },
-        { label: 'Free T4', value: '1.1 ng/dL', numericValue: 1.1, unit: 'ng/dL', refMin: 0.8, refMax: 1.8, status: 'Normal' },
-        { label: 'Free T3', value: '3.0 pg/mL', numericValue: 3.0, unit: 'pg/mL', refMin: 2.3, refMax: 4.2, status: 'Normal' }
-      );
-    } else if (lowerFn.includes('lipid') || lowerFn.includes('cardiac') || rawText.toLowerCase().includes('cholesterol')) {
-      category = 'Cardiology';
-      importantValues.push(
-        { label: 'Total Cholesterol', value: '238 mg/dL', numericValue: 238, unit: 'mg/dL', refMin: 125, refMax: 200, status: 'High' },
-        { label: 'Triglycerides', value: '185 mg/dL', numericValue: 185, unit: 'mg/dL', refMin: 35, refMax: 150, status: 'High' },
-        { label: 'HDL Cholesterol', value: '42 mg/dL', numericValue: 42, unit: 'mg/dL', refMin: 40, refMax: 60, status: 'Normal' },
-        { label: 'LDL Cholesterol', value: '159 mg/dL', numericValue: 159, unit: 'mg/dL', refMin: 0, refMax: 100, status: 'High' }
-      );
-    } else {
-      category = 'Hematology & General Biochemistry';
-      importantValues.push(
-        { label: 'Hemoglobin (Hb)', value: '13.8 g/dL', numericValue: 13.8, unit: 'g/dL', refMin: 13.5, refMax: 17.5, status: 'Normal' },
-        { label: 'Fasting Blood Sugar', value: '118 mg/dL', numericValue: 118, unit: 'mg/dL', refMin: 70, refMax: 99, status: 'High' },
-        { label: 'Platelet Count', value: '240,000 /µL', numericValue: 240000, unit: '/µL', refMin: 150000, refMax: 450000, status: 'Normal' },
-        { label: 'Serum Creatinine', value: '0.9 mg/dL', numericValue: 0.9, unit: 'mg/dL', refMin: 0.7, refMax: 1.2, status: 'Normal' }
-      );
-    }
+  // Check category
+  if (foundTests.some(t => ['Hemoglobin', 'Total RBC', 'Hematocrit', 'MCV', 'MCH', 'MCHC', 'Platelet Count', 'Total WBC', 'Neutrophils', 'Lymphocytes'].includes(t.name))) {
+    category = 'Hematology (Complete Blood Count)';
+  } else if (foundTests.some(t => ['Fasting Blood Sugar', 'Postprandial Blood Sugar', 'HbA1c', 'TSH'].includes(t.name))) {
+    category = 'Endocrinology & Diabetes';
+  } else if (foundTests.some(t => ['Serum Creatinine', 'Blood Urea', 'Uric Acid'].includes(t.name))) {
+    category = 'Renal Function';
+  } else if (foundTests.some(t => ['Total Cholesterol', 'Triglycerides', 'HDL Cholesterol', 'LDL Cholesterol'].includes(t.name))) {
+    category = 'Lipid Profile';
   }
 
   return {
-    metadata: {
-      patientName,
-      labName,
-      reportDate,
-      category,
-      rawTextSnippet: rawText.slice(0, 300),
-    },
-    importantValues,
+    source: 'deterministic_text',
+    patient: { name: patientName },
+    report: { title: filename ? filename.replace(/\.[^/.]+$/, '').replace(/_/g, ' ') : 'Medical Lab Report', date: reportDate, category, laboratory: labName },
+    tests: foundTests,
   };
-};
+}
 
 /**
- * Stage 4, 5 & 6: Reference Range Check, Abnormality Detection & Clinical Reasoning
+ * Stage 2: Validation Layer & Clinical Reasoning
+ * Filters abnormal findings, validates ranges, determines matching specialist.
  */
-export const evaluateClinicalFindings = (structuredData) => {
-  const { importantValues, metadata } = structuredData;
+export const validateAndEvaluateMedicalReport = (extractedData) => {
+  const tests = extractedData?.tests || [];
+  const patient = extractedData?.patient || {};
+  const reportMeta = extractedData?.report || {};
+
+  // If no tests detected at all (e.g. blank page or non-medical photo)
+  if (tests.length === 0) {
+    return {
+      metadata: {
+        patientName: patient.name || 'Patient',
+        reportDate: reportMeta.date || new Date().toISOString().split('T')[0],
+        category: 'Unclassified Document',
+        laboratory: reportMeta.laboratory || 'Diagnostic Center',
+      },
+      importantValues: [],
+      detectedIssues: ['No valid medical test biomarkers could be detected in this uploaded document.'],
+      overallStatus: 'Inconclusive',
+      riskLevel: 'Low',
+      recommendedSpecialist: 'General Physician',
+      specialistReason: 'No diagnostic biomarkers detected. Please upload a clear photo or PDF scan of your medical laboratory report.',
+    };
+  }
+
+  const validatedValues = [];
   const abnormalList = [];
   const specialtyCount = {};
 
-  for (const item of importantValues) {
-    if (item.status !== 'Normal') {
-      const refStr = (item.refMin !== undefined && item.refMax !== undefined) 
-        ? ` (Ref: ${item.refMin} - ${item.refMax} ${item.unit})` 
-        : '';
-      abnormalList.push(`${item.label} recorded at ${item.value} [${item.status}]${refStr}`);
+  for (const t of tests) {
+    if (!t.name || t.numericValue === undefined || isNaN(t.numericValue)) {
+      if (t.status === 'unreadable' || t.status === 'Unreadable') {
+        validatedValues.push({
+          label: t.name || 'Unidentified Parameter',
+          value: 'Unreadable',
+          numericValue: null,
+          unit: '',
+          refMin: null,
+          refMax: null,
+          status: 'Unreadable',
+          confidence: 0,
+          sourceEvidence: 'Value unreadable or blurry on report scan',
+        });
+      }
+      continue;
+    }
 
-      // Map specialty
-      const metaKey = Object.keys(CLINICAL_REFERENCE_RANGES).find(k => k.toLowerCase() === item.label.toLowerCase());
-      const spec = metaKey ? CLINICAL_REFERENCE_RANGES[metaKey].specialty : 'General Physician';
+    const valNum = t.numericValue;
+    // Find matching reference info using aliases or exact name
+    const stdInfo = Object.values(CLINICAL_REFERENCE_RANGES).find(info => 
+      info.aliases.some(alias => t.name.toLowerCase().includes(alias.toLowerCase()))
+    ) || CLINICAL_REFERENCE_RANGES[t.name] || {};
+
+    const refMin = t.refMin !== undefined && t.refMin !== null ? t.refMin : stdInfo.min;
+    const refMax = t.refMax !== undefined && t.refMax !== null ? t.refMax : stdInfo.max;
+    const unit = t.unit || stdInfo.unit || '';
+
+    let status = t.status || 'Normal';
+    if (refMin !== undefined && refMax !== undefined) {
+      if (valNum < refMin) status = 'Low';
+      else if (valNum > refMax) status = 'High';
+      else status = 'Normal';
+    }
+
+    const valueItem = {
+      label: t.name,
+      value: `${valNum} ${unit}`.trim(),
+      numericValue: valNum,
+      unit,
+      refMin,
+      refMax,
+      referenceRange: t.referenceRange || (refMin !== undefined && refMax !== undefined ? `${refMin} - ${refMax} ${unit}` : 'Standard'),
+      status,
+      confidence: t.confidence || 0.95,
+      sourceEvidence: t.sourceEvidence || `${t.name}: ${valNum} ${unit}`,
+    };
+
+    validatedValues.push(valueItem);
+
+    if (status !== 'Normal') {
+      const refStr = (refMin !== undefined && refMax !== undefined) ? ` (Ref: ${refMin} - ${refMax} ${unit})` : '';
+      abnormalList.push(`${t.name} recorded at ${valNum} ${unit} [${status}]${refStr}`);
+
+      const spec = stdInfo.specialty || 'General Physician';
       specialtyCount[spec] = (specialtyCount[spec] || 0) + 1;
     }
   }
 
-  // Determine Primary Specialist
+  // Determine Primary Specialist dynamically based on detected abnormal findings
   let recommendedSpecialist = 'General Physician';
   let maxCount = 0;
   for (const [spec, count] of Object.entries(specialtyCount)) {
@@ -207,27 +383,48 @@ export const evaluateClinicalFindings = (structuredData) => {
     }
   }
 
-  // If no abnormalities
-  if (abnormalList.length === 0) {
-    abnormalList.push('All evaluated biomarkers are within standard reference ranges.');
+  // Provide clinical rationale for recommended specialist
+  let specialistReason = 'General Physician consultation for routine evaluation and health optimization.';
+  if (recommendedSpecialist === 'Hematologist') {
+    specialistReason = 'The uploaded report contains significant abnormalities in blood count biomarkers (e.g. Hemoglobin / WBC / Platelets) warranting evaluation by a Hematologist or Physician.';
+  } else if (recommendedSpecialist === 'Endocrinologist') {
+    specialistReason = 'The uploaded report contains glucose/hormone abnormalities requiring specialized metabolic assessment.';
+  } else if (recommendedSpecialist === 'Nephrologist') {
+    specialistReason = 'The uploaded report contains renal/kidney parameter deviations warranting nephrology evaluation.';
+  } else if (recommendedSpecialist === 'Cardiologist') {
+    specialistReason = 'The uploaded report contains cardiovascular/lipid profile elevations requiring cardiology guidance.';
+  } else if (recommendedSpecialist === 'Gastroenterologist') {
+    specialistReason = 'The uploaded report contains liver enzyme variations requiring gastroenterology evaluation.';
   }
 
-  // Overall Status & Risk Scoring
-  const isAbnormal = abnormalList.some(item => !item.includes('within standard reference ranges'));
+  // Overall Status and Risk Level
+  const isAbnormal = abnormalList.length > 0;
   const overallStatus = isAbnormal ? 'Abnormal' : 'Normal';
-  
+
   let riskLevel = 'Low';
-  if (abnormalList.length >= 3) {
+  const hasSevereHb = validatedValues.some(v => v.label === 'Hemoglobin' && v.numericValue < 9.0);
+  const hasSevereWbc = validatedValues.some(v => v.label.includes('WBC') && v.numericValue > 20.0);
+
+  if (hasSevereHb || hasSevereWbc || abnormalList.length >= 3) {
     riskLevel = 'High';
-  } else if (abnormalList.length >= 1 && isAbnormal) {
+  } else if (isAbnormal) {
     riskLevel = 'Moderate';
   }
 
   return {
+    metadata: {
+      patientName: patient.name || 'Patient',
+      age: patient.age || null,
+      sex: patient.sex || null,
+      reportDate: reportMeta.date || new Date().toISOString().split('T')[0],
+      category: reportMeta.category || 'General Health Report',
+      laboratory: reportMeta.laboratory || 'Diagnostic Clinical Laboratory',
+    },
+    importantValues: validatedValues,
+    detectedIssues: abnormalList.length > 0 ? abnormalList : ['All evaluated biomarkers are strictly within standard reference ranges.'],
     overallStatus,
     riskLevel,
     recommendedSpecialist,
-    detectedIssues: abnormalList,
-    category: metadata.category,
+    specialistReason,
   };
 };

@@ -13,59 +13,67 @@ function getAiClient() {
 }
 
 /**
- * Stage 7: LLM Patient Explanation Engine
- * Crucial Architecture Decision:
- * Receives ONLY structured JSON findings (Biomarkers, Reference Ranges, Clinical Risk)
- * NEVER receives raw PDF binary files.
+ * Stage 3: LLM Patient Explanation Engine
+ * Crucial Rule:
+ * Receives ONLY validated structured findings from the Vision/OCR extraction stage.
+ * Never guesses, hallucinates, or introduces unmentioned lab parameters.
  */
-export const generateReportExplanationWithGemini = async (structuredData, clinicalFindings) => {
+export const generateReportExplanationWithGemini = async (clinicalFindings) => {
   const client = getAiClient();
-  const { metadata, importantValues } = structuredData;
-  const { overallStatus, riskLevel, recommendedSpecialist, detectedIssues } = clinicalFindings;
+  const { metadata, importantValues, detectedIssues, overallStatus, riskLevel, recommendedSpecialist, specialistReason } = clinicalFindings;
 
-  // Prepare clean structured JSON payload for LLM
-  const structuredJsonPayload = {
+  // Filter only abnormal values
+  const abnormalBiomarkers = importantValues.filter(v => v.status === 'Low' || v.status === 'High' || v.status === 'Abnormal');
+  const normalBiomarkers = importantValues.filter(v => v.status === 'Normal');
+
+  const structuredPayload = {
     category: metadata.category,
     patientName: metadata.patientName,
-    labName: metadata.labName,
+    laboratory: metadata.laboratory,
     reportDate: metadata.reportDate,
     overallStatus,
     riskLevel,
     recommendedSpecialist,
-    biomarkers: importantValues.map(v => ({
-      parameter: v.label,
-      recordedValue: v.value,
-      referenceRange: (v.refMin !== undefined && v.refMax !== undefined) ? `${v.refMin} - ${v.refMax} ${v.unit}` : 'Standard',
-      clinicalStatus: v.status
+    specialistReason,
+    abnormalBiomarkers: abnormalBiomarkers.map(b => ({
+      name: b.label,
+      value: b.value,
+      referenceRange: b.referenceRange,
+      status: b.status,
+      evidence: b.sourceEvidence,
     })),
-    flaggedAbnormalities: detectedIssues
+    normalBiomarkersCount: normalBiomarkers.length,
+    allDetectedBiomarkers: importantValues.map(v => `${v.label}: ${v.value} [${v.status}]`),
   };
 
-  if (client) {
+  if (client && importantValues.length > 0) {
     try {
       const prompt = `
-You are an expert Clinical AI Medical Explainer for MedConnect.
-You have been provided with validated, structured medical lab data that was extracted and verified by a deterministic medical reference range engine.
+You are an expert, compassionate Medical AI Explainer for MedConnect Karavali.
+You have been provided with VALIDATED, STRICTLY EXTRACTED laboratory biomarkers from an uploaded medical document.
 
-IMPORTANT ARCHITECTURAL RULE: You are working purely with structured JSON data.
+STRICT MEDICAL EXPLANATION RULES:
+1. ONLY discuss the test parameters that are explicitly listed in [STRUCTURED MEDICAL DATA JSON].
+2. NEVER mention or invent unlisted tests (e.g. if Fasting Blood Sugar was not in the report, DO NOT mention Fasting Blood Sugar or Glucose).
+3. Do NOT make definitive diagnostic claims (e.g. do not say "You have Acute Leukemia" or "You have Diabetes"). Instead use safe, non-definitive phrasing such as "This result can be associated with...", "This may warrant clinical evaluation to rule out...", or "Your doctor will evaluate...".
+4. If parameters are normal, reassure the patient clearly.
+5. Provide actionable, supportive dietary/lifestyle suggestions and smart, relevant questions to ask their doctor.
 
 [STRUCTURED MEDICAL DATA JSON]
-${JSON.stringify(structuredJsonPayload, null, 2)}
+${JSON.stringify(structuredPayload, null, 2)}
 
-Task:
-Generate a compassionate, patient-friendly, easy-to-understand medical breakdown.
-Return a valid JSON object strictly matching this schema:
+Return a valid JSON object matching this schema:
 {
-  "summary": "Clear 2-3 sentence executive summary explaining overall health status in simple terms.",
-  "patientExplanation": "Detailed layman-friendly explanation of why certain biomarkers are elevated/low, what it means for body function, and reassurance.",
+  "summary": "Clear, compassionate 2-3 sentence executive clinical summary of overall findings in patient-friendly language.",
+  "patientExplanation": "Layman-friendly explanation explaining what the detected abnormal values mean for body physiology, without claiming a definitive diagnosis.",
+  "whatItMayMean": "Careful clinical contextualization of possible causes and factors associated with these specific lab values.",
   "recommendations": [
-    "Actionable lifestyle/diet recommendation 1",
-    "Actionable lifestyle/diet recommendation 2",
-    "Actionable follow-up recommendation 3"
+    "Appropriate next step 1",
+    "Appropriate next step 2"
   ],
   "questionsForDoctor": [
-    "Question 1 to ask the doctor during consultation",
-    "Question 2 to ask the doctor during consultation"
+    "Relevant question 1 for physician consultation",
+    "Relevant question 2 for physician consultation"
   ]
 }
 
@@ -82,50 +90,60 @@ Return ONLY valid JSON.
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         return {
-          summary: parsed.summary || `${metadata.category} report for ${metadata.patientName}. Status evaluated as ${overallStatus}.`,
-          patientExplanation: parsed.patientExplanation || `Clinical analysis shows ${detectedIssues.join(', ')}.`,
+          summary: parsed.summary || (overallStatus === 'Abnormal' ? `Analysis of your ${metadata.category} report identified ${abnormalBiomarkers.length} parameter(s) requiring medical review.` : `All detected biomarkers in your ${metadata.category} report are within standard physiological reference ranges.`),
+          patientExplanation: parsed.patientExplanation || (overallStatus === 'Abnormal' ? `The uploaded document shows ${detectedIssues.join(', ')}.` : 'Your laboratory parameters reflect normal physiological balance.'),
+          whatItMayMean: parsed.whatItMayMean || (overallStatus === 'Abnormal' ? `These findings may be associated with physiological variations, inflammation, or nutritional factors, which your doctor can correlate with your symptoms.` : 'Your laboratory values indicate healthy metabolic function.'),
           recommendations: parsed.recommendations || [
-            'Maintain balanced diet rich in hydration and fresh greens.',
-            `Consult a ${recommendedSpecialist} for comprehensive follow-up assessment.`
+            overallStatus === 'Abnormal' ? `Consult with a ${recommendedSpecialist} for full clinical evaluation.` : 'Continue healthy lifestyle habits and routine checkups.',
+            'Maintain adequate hydration and balanced nutrition.'
           ],
           questionsForDoctor: parsed.questionsForDoctor || [
-            `How does my ${importantValues[0]?.label || 'test result'} affect my long-term health?`,
-            'Are any additional follow-up diagnostic tests needed?'
-          ]
+            `What could be contributing to my ${abnormalBiomarkers[0]?.name || 'lab'} values?`,
+            'Would you recommend repeating this test in a few weeks?'
+          ],
+          disclaimer: 'This AI analysis is for informational purposes only and does not replace professional clinical judgment or diagnosis by a qualified healthcare provider.'
         };
       }
     } catch (err) {
-      console.warn('⚠️ Gemini Report Explanation API call failed, using clinical fallback:', err.message);
+      console.warn('⚠️ Gemini Report Explanation call failed, using deterministic safe explanation:', err.message);
     }
   }
 
-  // Fallback Explanation Engine if Gemini API is offline
-  let summary = `Your ${metadata.category} report has been analyzed. Overall clinical status is marked as ${overallStatus} with ${riskLevel} risk level.`;
-  let patientExplanation = `All parameters were checked against standard reference ranges. `;
+  // Deterministic Clinical Fallback
+  let summary = '';
+  let patientExplanation = '';
+  let whatItMayMean = '';
+  const recommendations = [];
+  const questionsForDoctor = [];
+
   if (overallStatus === 'Abnormal') {
-    summary = `Your ${metadata.category} shows biomarkers outside standard reference bounds (${detectedIssues.length} observation flagged). Consultation with a ${recommendedSpecialist} is advised.`;
-    patientExplanation += `Elevated or reduced levels in ${detectedIssues.join(', ')} require specialist evaluation to ensure optimal metabolic balance.`;
+    summary = `Your ${metadata.category} report shows ${abnormalBiomarkers.length} biomarker(s) outside standard laboratory bounds. Consultation with a ${recommendedSpecialist} is recommended.`;
+    patientExplanation = `Detected variations in ${abnormalBiomarkers.map(b => `${b.name} (${b.value})`).join(', ')} may warrant clinical evaluation.`;
+    whatItMayMean = `These findings can be associated with acute or chronic physiological responses, dietary intake, or systemic changes that a physician will interpret in the context of your overall health.`;
+    recommendations.push(`Schedule an appointment with a ${recommendedSpecialist} at your earliest convenience.`);
+    recommendations.push('Bring this report to your consultation for doctor review.');
+    questionsForDoctor.push(`What specific lifestyle or clinical factors could have influenced my ${abnormalBiomarkers[0]?.name || 'test'} level?`);
+    questionsForDoctor.push('Are there any additional confirmatory blood tests or follow-ups needed?');
+  } else if (importantValues.length > 0) {
+    summary = `Great news! All ${importantValues.length} laboratory test parameter(s) detected in your ${metadata.category} report are within standard reference ranges.`;
+    patientExplanation = `Your evaluated biomarkers show healthy physiological and metabolic balance.`;
+    whatItMayMean = `Normal test values suggest appropriate organ function and baseline health in the areas evaluated by this report.`;
+    recommendations.push('Maintain regular hydration, balanced nutrition, and active lifestyle.');
+    recommendations.push('Continue routine annual preventative health screenings.');
+    questionsForDoctor.push('When should I schedule my next routine preventive health checkup?');
   } else {
-    summary = `Great news! All evaluated lab parameters in your ${metadata.category} report are within standard physiological reference ranges.`;
-    patientExplanation += `Your biomarkers demonstrate normal metabolic and physiological function.`;
+    summary = 'No standard laboratory test parameters could be detected from this uploaded file.';
+    patientExplanation = 'Please ensure you upload a clear, legible photo or PDF scan of your medical lab report.';
+    whatItMayMean = 'The document was either unreadable or did not contain recognizable clinical test tables.';
+    recommendations.push('Upload a high-resolution scan or photo of your diagnostic report.');
   }
-
-  const recommendations = [
-    'Maintain a wholesome coastal Karnataka diet with fresh vegetables and hydration.',
-    overallStatus === 'Abnormal'
-      ? `Schedule an appointment with a ${recommendedSpecialist} within 7 days.`
-      : 'Continue routine annual health checkups.'
-  ];
-
-  const questionsForDoctor = [
-    `What factors contributed to my ${importantValues.find(v => v.status !== 'Normal')?.label || 'biomarker'} levels?`,
-    'Should I repeat this lab test in 3 to 6 months?'
-  ];
 
   return {
     summary,
     patientExplanation,
+    whatItMayMean,
     recommendations,
-    questionsForDoctor
+    questionsForDoctor,
+    disclaimer: 'This AI analysis is for informational purposes only and does not replace professional clinical judgment or diagnosis by a qualified healthcare provider.'
   };
 };

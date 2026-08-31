@@ -1842,21 +1842,39 @@ async function initPgSchema() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_appointments_doctor_date_slot ON appointments (doctor_id, date, time_slot, status, created_at ASC);
-    CREATE INDEX IF NOT EXISTS idx_appointments_doctor_date ON appointments (doctor_id, date, status, created_at ASC);
 
+    DELETE FROM appointments a USING appointments b
+    WHERE a.ctid < b.ctid
+      AND a.user_id = b.user_id
+      AND a.doctor_id = b.doctor_id
+      AND a.date = b.date
+      AND a.time_slot = b.time_slot
+      AND LOWER(a.status) NOT IN ('cancelled', 'no_show')
+      AND LOWER(b.status) NOT IN ('cancelled', 'no_show');
 
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_booking ON appointments (user_id, doctor_id, date, time_slot) WHERE status NOT IN ('cancelled', 'no_show');
     CREATE TABLE IF NOT EXISTS medical_reports (
       id VARCHAR(100) PRIMARY KEY,
+      patient_id VARCHAR(100) REFERENCES users(id) ON DELETE CASCADE,
       user_id VARCHAR(100) REFERENCES users(id) ON DELETE CASCADE,
-      title VARCHAR(255) NOT NULL,
-      category VARCHAR(100) NOT NULL,
-      date VARCHAR(50) NOT NULL,
+      file_name VARCHAR(255),
+      file_path TEXT,
+      file_type VARCHAR(100) DEFAULT 'application/pdf',
+      file_size BIGINT,
+      uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      analysis_status VARCHAR(50) DEFAULT 'pending',
+      extracted_data JSONB,
+      ai_summary TEXT,
+      recommended_specialty VARCHAR(255),
+      specialist_reason TEXT,
+      title VARCHAR(255),
+      category VARCHAR(100) DEFAULT 'General Lab Report',
+      date VARCHAR(50),
       doctor_name VARCHAR(255),
       status VARCHAR(50) DEFAULT 'Normal',
       summary TEXT,
       metrics TEXT,
       file_url TEXT,
-      file_type VARCHAR(50) DEFAULT 'pdf',
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -1908,6 +1926,23 @@ async function initPgSchema() {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Auto-migrate PostgreSQL medical_reports columns
+  const reportMigrations = [
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS patient_id VARCHAR(100) REFERENCES users(id) ON DELETE CASCADE`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS file_path TEXT`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS file_size BIGINT`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS analysis_status VARCHAR(50) DEFAULT 'pending'`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS extracted_data JSONB`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS ai_summary TEXT`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS recommended_specialty VARCHAR(255)`,
+    `ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS specialist_reason TEXT`,
+  ];
+  for (const m of reportMigrations) {
+    try { await pgPool.query(m); } catch (e) {}
+  }
 
 
   // Seed Users safely with ON CONFLICT DO NOTHING to preserve registered users
@@ -2128,10 +2163,23 @@ async function initSqliteSchema() {
       meeting_url TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE INDEX IF NOT EXISTS idx_appointments_doctor_date_slot ON appointments (doctor_id, date, time_slot, status, created_at ASC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_booking ON appointments (user_id, doctor_id, date, time_slot) WHERE status NOT IN ('cancelled', 'no_show');
 
     CREATE TABLE IF NOT EXISTS medical_reports (
       id TEXT PRIMARY KEY,
+      patient_id TEXT,
       user_id TEXT,
+      file_name TEXT,
+      file_path TEXT,
+      file_type TEXT DEFAULT 'application/pdf',
+      file_size INTEGER,
+      uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      analysis_status TEXT DEFAULT 'pending',
+      extracted_data TEXT,
+      ai_summary TEXT,
+      recommended_specialty TEXT,
+      specialist_reason TEXT,
       title TEXT NOT NULL,
       category TEXT NOT NULL,
       date TEXT NOT NULL,
@@ -2140,7 +2188,6 @@ async function initSqliteSchema() {
       summary TEXT,
       metrics TEXT,
       file_url TEXT,
-      file_type TEXT DEFAULT 'pdf',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -2184,6 +2231,18 @@ async function initSqliteSchema() {
   try {
     await sqliteDb.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_doctors_user_id ON doctors(user_id)`);
   } catch (e) {}
+
+  // Medical reports column migrations
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN patient_id TEXT REFERENCES users(id)`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN file_name TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN file_path TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN file_size INTEGER`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN analysis_status TEXT DEFAULT 'pending'`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN extracted_data TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN ai_summary TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN recommended_specialty TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN specialist_reason TEXT`); } catch (e) {}
 
   // Seed Users safely with INSERT OR IGNORE to preserve registered users
 
