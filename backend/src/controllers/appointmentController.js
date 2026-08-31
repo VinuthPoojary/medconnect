@@ -532,11 +532,28 @@ export const cancelAppointment = async (req, res) => {
  */
 export const getDoctorQueueStatus = async (req, res) => {
   try {
-    const { doctorId, doctorName, date, timeSlot, appointmentId } = req.query;
-    const authUserId = req.user?.id || req.query.userId || null;
+    const { doctorId, doctorName, date, timeSlot, appointmentId } = req.query || {};
+    const authUserId = req.user?.id || req.query?.userId || null;
     const cleanDate = date || new Date().toISOString().split('T')[0];
-    const doctorRecord = await resolveDoctor(doctorId, doctorName);
-    const targetDocId = doctorRecord ? doctorRecord.id : doctorId;
+
+    let targetDocId = doctorId;
+    let targetDate = cleanDate;
+    let targetSlot = timeSlot;
+    let directAptObj = null;
+
+    if (appointmentId) {
+      const directAptRes = await query('SELECT * FROM appointments WHERE id = $1', [appointmentId]);
+      if (directAptRes.rows.length > 0) {
+        directAptObj = directAptRes.rows[0];
+        targetDocId = directAptObj.doctor_id || targetDocId;
+        targetDate = directAptObj.date || targetDate;
+        targetSlot = directAptObj.time_slot || targetSlot;
+      }
+    }
+
+    const doctorRecord = await resolveDoctor(targetDocId, doctorName);
+    const resolvedDocId = doctorRecord ? doctorRecord.id : targetDocId;
+    const cleanDocName = (doctorRecord?.name || doctorName || '').replace(/^Dr\.\s*/i, '').trim();
 
     let sql = `
       SELECT 
@@ -549,14 +566,27 @@ export const getDoctorQueueStatus = async (req, res) => {
         status, 
         created_at as "createdAt"
       FROM appointments 
-      WHERE (doctor_id = $1 OR doctor_id = $2 OR $1 IS NULL OR $1 = '')
-        AND date = $3
-        AND LOWER(status) != 'cancelled'
+      WHERE (
+        doctor_id = $1 
+        OR doctor_id = $2 
+        OR doctor_id = $3
+        OR (doctor_name ILIKE $4 AND $4 != '%%')
+        OR $1 IS NULL 
+        OR $1 = ''
+      )
+      AND date = $5
+      AND LOWER(status) != 'cancelled'
     `;
-    const params = [targetDocId || '', (targetDocId || '').replace('user-doc-', 'doc-'), cleanDate];
+    const params = [
+      resolvedDocId || '',
+      (resolvedDocId || '').replace('user-doc-', 'doc-'),
+      targetDocId || '',
+      `%${cleanDocName}%`,
+      targetDate
+    ];
 
-    if (timeSlot) {
-      params.push(timeSlot);
+    if (targetSlot) {
+      params.push(targetSlot);
       sql += ` AND time_slot = $${params.length}`;
     }
 
@@ -569,6 +599,9 @@ export const getDoctorQueueStatus = async (req, res) => {
     const inConsultation = activeList.find((a) =>
       ['in_consultation', 'called'].includes((a.status || '').toLowerCase())
     );
+    const nextWaiting = activeList.find((a) =>
+      ['waiting', 'booked', 'upcoming', 'checked_in'].includes((a.status || '').toLowerCase())
+    );
     const completedList = activeList.filter(
       (a) => (a.status || '').toLowerCase() === 'completed'
     );
@@ -576,6 +609,8 @@ export const getDoctorQueueStatus = async (req, res) => {
 
     const currentTokenNumber = inConsultation
       ? inConsultation.queueNumber || 1
+      : nextWaiting
+      ? nextWaiting.queueNumber || 1
       : lastCompleted
       ? lastCompleted.queueNumber
       : activeList[0]?.queueNumber || 1;
@@ -599,7 +634,7 @@ export const getDoctorQueueStatus = async (req, res) => {
       const aStatus = (a.status || '').toLowerCase();
       return (
         aToken < yourTokenNumber &&
-        ['waiting', 'booked', 'upcoming', 'in_consultation', 'called'].includes(
+        ['waiting', 'booked', 'upcoming', 'in_consultation', 'called', 'checked_in'].includes(
           aStatus
         )
       );
@@ -609,14 +644,31 @@ export const getDoctorQueueStatus = async (req, res) => {
     const estimatedWaitTime =
       patientsAhead > 0 ? `~${estimatedWaitMinutes} minutes` : 'Immediate (~2 mins)';
 
+    const fullQueue = activeList.map((a) => ({
+      id: a.id,
+      queueNumber: a.queueNumber || 1,
+      tokenNumber: `#0${a.queueNumber || 1}`,
+      status: (a.status || 'waiting').toLowerCase(),
+      isMyToken: myApt ? a.id === myApt.id : false,
+      userId: a.userId,
+    }));
+
     res.json({
       success: true,
+      doctorId: targetDocId,
+      doctorName: doctorRecord?.name || doctorName,
+      hospitalName: doctorRecord?.hospital_name || doctorRecord?.hospitalName || '',
+      specialization: doctorRecord?.specialization || '',
+      date: cleanDate,
+      timeSlot: timeSlot || '',
       totalBooked,
       currentToken: currentTokenNumber,
       yourToken: yourTokenNumber,
       patientsAhead,
       status: myStatus,
       estimatedWaitTime,
+      fullQueue,
+      queue: fullQueue,
       queueStatus: {
         totalBooked,
         currentToken: currentTokenNumber,
@@ -624,6 +676,7 @@ export const getDoctorQueueStatus = async (req, res) => {
         patientsAhead,
         status: myStatus,
         estimatedWaitTime,
+        fullQueue,
       },
     });
   } catch (error) {
@@ -663,7 +716,7 @@ export const updateAppointmentStatus = async (req, res) => {
          WHERE (doctor_id = $1 OR doctor_name = $2) 
            AND date = $3 
            AND time_slot = $4 
-           AND status = 'waiting'
+           AND LOWER(status) IN ('waiting', 'booked', 'upcoming', 'checked_in')
          ORDER BY queue_number ASC, created_at ASC LIMIT 1`,
         [apt.doctor_id || '', apt.doctor_name || '', apt.date || '', apt.time_slot || '']
       );

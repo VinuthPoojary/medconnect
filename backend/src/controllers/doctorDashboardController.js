@@ -366,11 +366,13 @@ export const updateQueueStatus = async (req, res) => {
     if (nextStatus === 'completed') {
       const nextInLineRes = await query(
         `SELECT * FROM appointments 
-         WHERE doctor_id = $1
-           AND id != $2 
-           AND LOWER(status) IN ('waiting', 'booked', 'upcoming')
+         WHERE (doctor_id = $1 OR doctor_id = $2 OR doctor_name ILIKE $3)
+           AND id != $4 
+           AND date = $5
+           AND time_slot = $6
+           AND LOWER(status) IN ('waiting', 'booked', 'upcoming', 'checked_in')
          ORDER BY queue_number ASC, created_at ASC LIMIT 1`,
-        [doctorId, appointmentId]
+        [doctorId, doctorId.replace('user-doc-', 'doc-'), doctorName, appointmentId, apt.date, apt.time_slot]
       );
 
       if (nextInLineRes.rows.length > 0) {

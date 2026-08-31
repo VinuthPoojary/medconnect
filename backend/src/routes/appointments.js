@@ -13,8 +13,8 @@ import { authenticateToken } from '../middleware/auth.js';
 const router = Router();
 
 router.get('/slot-counts', getSlotCounts);
-router.get('/live-queue', getLiveQueue);
-router.get('/queue-status', getDoctorQueueStatus);
+router.get('/live-queue', authenticateToken, getLiveQueue);
+router.get('/queue-status', authenticateToken, getDoctorQueueStatus);
 router.get('/', authenticateToken, getAppointments);
 router.post('/', authenticateToken, createAppointment);
 router.patch('/:id/status', updateAppointmentStatus);
