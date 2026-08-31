@@ -1,6 +1,4 @@
 import pg from 'pg';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -1744,6 +1742,9 @@ async function initDb() {
 
   useSqlite = true;
   const dbPath = path.join(__dirname, 'medconnect.db');
+  const sqlite3Module = await import('sqlite3');
+  const { open } = await import('sqlite');
+  const sqlite3 = sqlite3Module.default || sqlite3Module;
   sqliteDb = await open({
     filename: dbPath,
     driver: sqlite3.default?.Database || sqlite3.Database,
