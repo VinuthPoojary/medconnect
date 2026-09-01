@@ -104,11 +104,11 @@ export const Sidebar = () => {
   const sections = role === 'doctor' ? doctorSections : role === 'hospital' ? hospitalSections : role === 'admin' ? adminSections : patientSections;
 
   return (
-    <aside className="w-60 bg-white/95 backdrop-blur-xl border-r border-slate-200/80 hidden md:flex flex-col justify-between py-5 px-3.5 shrink-0 min-h-[calc(100vh-65px)] sticky top-[65px] h-[calc(100vh-65px)] overflow-y-auto shadow-xs">
+    <aside className="w-60 bg-white border-r border-[#E2E8F0] hidden md:flex flex-col justify-between py-5 px-3.5 shrink-0 min-h-[calc(100vh-65px)] sticky top-[65px] h-[calc(100vh-65px)] overflow-y-auto shadow-xs">
       <div className="space-y-5">
         {sections.map((section, idx) => (
           <div key={idx} className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 py-1">
+            <p className="text-[10px] font-black uppercase tracking-wider text-[#94A3B8] px-3 py-1">
               {section.title}
             </p>
 
@@ -119,10 +119,11 @@ export const Sidebar = () => {
                   <button
                     key={item.view}
                     onClick={() => setActiveView(item.view)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                    style={isActive ? { background: 'linear-gradient(90deg, #2563EB, #0F9D8A)' } : {}}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-gradient-to-r from-brand-600 to-cyan-600 text-white shadow-md shadow-brand-500/15'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90'
+                        ? 'text-white shadow-md shadow-blue-500/15'
+                        : 'text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -133,7 +134,7 @@ export const Sidebar = () => {
                     <div className="flex items-center gap-1 shrink-0 ml-1">
                       {item.isAi && (
                         <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md ${
-                          isActive ? 'bg-white/20 text-white' : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                          isActive ? 'bg-white/20 text-white' : 'bg-teal-50 text-[#0F766E] border border-teal-200'
                         }`}>
                           AI
                         </span>

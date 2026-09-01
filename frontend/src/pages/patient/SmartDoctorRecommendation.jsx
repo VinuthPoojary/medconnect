@@ -48,50 +48,64 @@ export const SmartDoctorRecommendation = () => {
     <div className="space-y-8 pb-12 max-w-4xl mx-auto">
       
       {/* Title */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold shadow-lg shadow-cyan-500/10">
-          <BrainCircuit className="w-3.5 h-3.5 text-cyan-400 animate-pulse" /> AI Doctor Matchmaking Algorithm
+      <div className="text-center space-y-2.5">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F0FDFA] border border-[#CCFBF1] text-[#0F766E] text-xs font-bold shadow-xs">
+          <BrainCircuit className="w-4 h-4 text-[#0F766E]" />
+          <span>AI Doctor Matching Algorithm</span>
         </div>
-        <h1 className="text-3xl font-black text-white">Smart Doctor Recommendation</h1>
-        <p className="text-xs text-slate-300">Answer 5 quick health questions to calculate your personalized specialist match</p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
+          Smart Doctor Recommendation
+        </h1>
+        <p className="text-xs sm:text-sm text-[#64748B] font-medium">
+          Answer 5 quick health questions to calculate your personalized specialist match
+        </p>
       </div>
 
       {step <= 5 && (
-        <div className="glass-card p-8 border-slate-800 space-y-6 glow-cyan">
+        <div className="bg-[#FFFFFF] p-6 sm:p-8 rounded-2xl border border-[#E2E8F0] shadow-[0_8px_24px_rgba(15,23,42,0.08)] space-y-6">
           
           {/* Progress Bar */}
-          <div className="flex items-center justify-between text-xs text-slate-400 font-bold">
-            <span>Step {step} of 5</span>
-            <span>{step * 20}% Complete</span>
-          </div>
-          <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-            <div className="bg-gradient-to-r from-brand-600 to-cyan-400 h-full transition-all duration-300" style={{ width: `${step * 20}%` }}></div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-[#0F766E]">Step {step} of 5</span>
+              <span className="text-[#2563EB]">{step * 20}% Complete</span>
+            </div>
+            <div className="w-full bg-[#E2E8F0] h-2.5 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-[#2563EB] to-[#14B8A6] h-full rounded-full transition-all duration-300 shadow-xs"
+                style={{ width: `${step * 20}%` }}
+              />
+            </div>
           </div>
 
           {/* Question Steps */}
           {step === 1 && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-white">1. What is your age?</h3>
+            <div className="space-y-3.5">
+              <h3 className="text-base font-bold text-[#0F172A]">1. What is your age?</h3>
+              <p className="text-xs text-[#64748B]">Age helps us prioritize pediatric, adult, or geriatric specialists.</p>
               <input
                 type="number"
                 value={formData.age}
                 onChange={e => setFormData({ ...formData, age: e.target.value })}
-                className="glass-input text-sm w-full"
+                placeholder="e.g. 29"
+                className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
               />
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-white">2. What is your gender?</h3>
+            <div className="space-y-3.5">
+              <h3 className="text-base font-bold text-[#0F172A]">2. What is your gender?</h3>
               <div className="grid grid-cols-3 gap-3">
                 {['Female', 'Male', 'Other'].map(g => (
                   <button
                     key={g}
                     type="button"
                     onClick={() => setFormData({ ...formData, gender: g })}
-                    className={`p-4 rounded-2xl border text-xs font-bold transition-all ${
-                      formData.gender === g ? 'bg-brand-600 text-white border-cyan-400' : 'bg-slate-950 text-slate-300 border-slate-800'
+                    className={`p-4 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      formData.gender === g
+                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-500/20 ring-2 ring-blue-200'
+                        : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#F8FAFC]'
                     }`}
                   >
                     {g}
@@ -102,8 +116,8 @@ export const SmartDoctorRecommendation = () => {
           )}
 
           {step === 3 && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-white">3. What is your primary symptom or health goal?</h3>
+            <div className="space-y-3.5">
+              <h3 className="text-base font-bold text-[#0F172A]">3. What is your primary symptom or health goal?</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                   'Cardiovascular / Heart screening',
@@ -116,11 +130,14 @@ export const SmartDoctorRecommendation = () => {
                     key={s}
                     type="button"
                     onClick={() => setFormData({ ...formData, symptoms: s })}
-                    className={`p-3.5 rounded-2xl border text-xs font-bold text-left transition-all ${
-                      formData.symptoms === s ? 'bg-brand-600 text-white border-cyan-400' : 'bg-slate-950 text-slate-300 border-slate-800'
+                    className={`p-4 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer flex items-center justify-between ${
+                      formData.symptoms === s
+                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-500/20 ring-2 ring-blue-200'
+                        : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#F8FAFC]'
                     }`}
                   >
-                    {s}
+                    <span>{s}</span>
+                    {formData.symptoms === s && <span className="text-xs">✓</span>}
                   </button>
                 ))}
               </div>
@@ -128,19 +145,22 @@ export const SmartDoctorRecommendation = () => {
           )}
 
           {step === 4 && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-white">4. Preferred location in coastal Karnataka?</h3>
+            <div className="space-y-3.5">
+              <h3 className="text-base font-bold text-[#0F172A]">4. Preferred location in coastal Karnataka?</h3>
               <div className="grid grid-cols-2 gap-3">
                 {['Mangaluru', 'Udupi', 'Manipal', 'Surathkal'].map(loc => (
                   <button
                     key={loc}
                     type="button"
                     onClick={() => setFormData({ ...formData, location: loc })}
-                    className={`p-3.5 rounded-2xl border text-xs font-bold transition-all ${
-                      formData.location === loc ? 'bg-brand-600 text-white border-cyan-400' : 'bg-slate-950 text-slate-300 border-slate-800'
+                    className={`p-4 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      formData.location === loc
+                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-500/20 ring-2 ring-blue-200'
+                        : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#F8FAFC]'
                     }`}
                   >
-                    {loc}
+                    <MapPin className={`w-3.5 h-3.5 ${formData.location === loc ? 'text-white' : 'text-[#64748B]'}`} />
+                    <span>{loc}</span>
                   </button>
                 ))}
               </div>
@@ -148,19 +168,22 @@ export const SmartDoctorRecommendation = () => {
           )}
 
           {step === 5 && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-white">5. Any relevant medical history?</h3>
+            <div className="space-y-3.5">
+              <h3 className="text-base font-bold text-[#0F172A]">5. Any relevant medical history?</h3>
               <div className="grid grid-cols-2 gap-3">
                 {['None', 'Hypertension', 'Type 2 Diabetes', 'Asthma', 'Heart Disease'].map(hist => (
                   <button
                     key={hist}
                     type="button"
                     onClick={() => setFormData({ ...formData, history: hist })}
-                    className={`p-3.5 rounded-2xl border text-xs font-bold transition-all ${
-                      formData.history === hist ? 'bg-brand-600 text-white border-cyan-400' : 'bg-slate-950 text-slate-300 border-slate-800'
+                    className={`p-4 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
+                      formData.history === hist
+                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-500/20 ring-2 ring-blue-200'
+                        : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#F8FAFC]'
                     }`}
                   >
-                    {hist}
+                    <span>{hist}</span>
+                    {formData.history === hist && <span className="text-xs">✓</span>}
                   </button>
                 ))}
               </div>
@@ -168,11 +191,12 @@ export const SmartDoctorRecommendation = () => {
           )}
 
           {/* Navigation Controls */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-between pt-4 border-t border-[#E2E8F0]">
             {step > 1 ? (
               <button
+                type="button"
                 onClick={() => setStep(step - 1)}
-                className="bg-slate-950 text-slate-300 hover:text-white border border-slate-800 px-4 py-2.5 rounded-xl text-xs font-semibold"
+                className="bg-white text-[#64748B] hover:text-[#0F172A] border border-[#E2E8F0] hover:bg-[#F8FAFC] px-5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs"
               >
                 Previous Step
               </button>
@@ -180,25 +204,27 @@ export const SmartDoctorRecommendation = () => {
 
             {step < 5 ? (
               <button
+                type="button"
                 onClick={() => setStep(step + 1)}
-                className="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-md"
+                className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
               >
                 Next Step
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleCalculate}
                 disabled={isCalculating}
-                className="bg-gradient-to-r from-brand-600 to-cyan-500 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-brand-500/20 flex items-center gap-2"
+                className="bg-gradient-to-r from-[#2563EB] to-[#0F766E] hover:from-[#1D4ED8] hover:to-[#0F766E] text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-75"
               >
                 {isCalculating ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-cyan-200" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
                     <span>Calculating AI Match...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 text-cyan-300" />
+                    <Sparkles className="w-4 h-4 text-[#14B8A6]" />
                     <span>View AI Doctor Match</span>
                   </>
                 )}
@@ -211,63 +237,84 @@ export const SmartDoctorRecommendation = () => {
 
       {/* Results View */}
       {step === 6 && recommendedDocs && (
-        <div className="space-y-6 animate-in fade-in zoom-in duration-300">
+        <div className="space-y-6 animate-in fade-in duration-300">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-white">Your AI Matched Specialists</h3>
-            <button onClick={() => setStep(1)} className="text-xs text-cyan-400 hover:underline font-semibold">Retake Questionnaire</button>
+            <h3 className="text-xl font-extrabold text-[#0F172A]">Your AI Matched Specialists</h3>
+            <button
+              onClick={() => setStep(1)}
+              className="text-xs font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline cursor-pointer transition-colors"
+            >
+              Retake Questionnaire
+            </button>
           </div>
 
           <div className="space-y-4">
             {recommendedDocs.map((rec, i) => (
-              <div key={i} className="glass-card p-6 border-slate-200/90 bg-white space-y-4 rounded-[18px] shadow-xs">
+              <div
+                key={i}
+                className="bg-[#FFFFFF] p-6 rounded-2xl border border-[#E2E8F0] shadow-[0_8px_24px_rgba(15,23,42,0.08)] space-y-4"
+              >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <img src={rec.doctor.photo} alt={rec.doctor.name} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shrink-0 shadow-2xs" />
+                    <img
+                      src={rec.doctor.photo}
+                      alt={rec.doctor.name}
+                      className="w-16 h-16 rounded-2xl object-cover border border-[#E2E8F0] shrink-0 shadow-2xs"
+                    />
                     <div>
                       <h4
                         onClick={() => { setSelectedDoctor(rec.doctor); setActiveView('doctor-details'); }}
-                        className="font-extrabold text-lg text-slate-900 hover:text-brand-600 cursor-pointer transition-colors"
+                        className="font-extrabold text-lg text-[#0F172A] hover:text-[#2563EB] cursor-pointer transition-colors"
                       >
                         {rec.doctor.name}
                       </h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[11px] font-bold uppercase text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200/80">
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className="text-[11px] font-bold uppercase text-[#0F766E] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
                           {rec.doctor.specialization}
                         </span>
-                        <span className="text-[11px] font-extrabold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
+                        <span className="text-[11px] font-extrabold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                           ★ {rec.doctor.rating}
                         </span>
                       </div>
-                      <p className="text-xs font-semibold text-slate-600 mt-1">{rec.doctor.hospitalName} • {rec.doctor.experience} years experience</p>
+                      <p className="text-xs font-medium text-[#64748B] mt-1.5 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-[#64748B]" />
+                        <span>{rec.doctor.hospitalName} • {rec.doctor.experience} experience</span>
+                      </p>
                     </div>
                   </div>
 
-                  <div className="bg-cyan-50 border border-cyan-200 p-3 rounded-2xl text-center shrink-0">
-                    <span className="text-[10px] text-cyan-800 font-extrabold uppercase tracking-wider">AI Match Score</span>
-                    <p className="text-2xl font-black text-cyan-700">{rec.matchScore}%</p>
+                  <div className="bg-[#F0FDFA] border border-[#CCFBF1] p-3.5 rounded-2xl text-center shrink-0">
+                    <span className="text-[10px] text-[#0F766E] font-extrabold uppercase tracking-wider block">
+                      AI Match Score
+                    </span>
+                    <p className="text-2xl font-black text-[#0F766E] mt-0.5">{rec.matchScore}%</p>
                   </div>
                 </div>
 
                 {/* Reasoning Card */}
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1">
-                  <span className="font-bold text-cyan-300 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5" /> AI Recommendation Rationale:
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] text-xs space-y-1.5">
+                  <span className="font-bold text-[#0F766E] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#14B8A6]" />
+                    <span>AI Recommendation Rationale:</span>
                   </span>
-                  <p className="leading-relaxed">{rec.reason}</p>
+                  <p className="text-[#64748B] leading-relaxed font-medium">{rec.reason}</p>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                  <span className="text-xs text-slate-400">Consultation Fee: <span className="font-extrabold text-white">₹{rec.doctor.consultationFee}</span></span>
+                <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0]">
+                  <span className="text-xs text-[#64748B] font-medium">
+                    Consultation Fee:{' '}
+                    <span className="font-extrabold text-[#0F172A] text-sm">₹{rec.doctor.consultationFee}</span>
+                  </span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => { setSelectedDoctor(rec.doctor); setActiveView('doctor-details'); }}
-                      className="bg-slate-950 hover:bg-slate-900 text-slate-300 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-800"
+                      className="bg-white hover:bg-[#F8FAFC] text-[#0F172A] text-xs font-bold px-4 py-2.5 rounded-xl border border-[#E2E8F0] transition-all cursor-pointer shadow-2xs"
                     >
                       View Profile
                     </button>
                     <button
                       onClick={() => setBookingDoctor(rec.doctor)}
-                      className="bg-gradient-to-r from-brand-600 to-cyan-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5"
+                      className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
                     >
                       <span>Book Slot</span>
                       <ArrowRight className="w-4 h-4" />
