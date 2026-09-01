@@ -322,19 +322,6 @@ export const AuthPages = () => {
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              {/* Production Test Credentials Hint */}
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
-                <p className="font-extrabold text-brand-700 flex items-center gap-1">
-                  <span>🔒 Production Credentials Reference</span>
-                </p>
-                <p className="text-[10px] text-slate-500">
-                  {selectedRole === 'patient' && 'Patient: +91 98450 12345 (Password: Patient@2026)'}
-                  {selectedRole === 'doctor' && 'Doctor: Select Doctor from list above (Password: Doctor@2026)'}
-                  {selectedRole === 'hospital' && 'Hospital Admin: hospital@medconnect.com (Password: Hospital@2026)'}
-                  {selectedRole === 'admin' && 'System Admin: admin@medconnect.com (Password: Admin@2026)'}
-                </p>
-              </div>
-
               {/* Toggle to Register below */}
               <div className="text-center text-xs text-slate-500 mt-6 pt-4 border-t border-slate-100 font-medium">
                 Don't have an account?{' '}

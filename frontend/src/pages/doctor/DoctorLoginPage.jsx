@@ -170,7 +170,7 @@ export const DoctorLoginPage = () => {
           <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs space-y-1.5">
             <p className="font-extrabold text-brand-700 flex items-center gap-1.5 text-[11px]">
               <Building2 className="w-3.5 h-3.5" />
-              <span>Available Doctor Accounts (Password: Doctor@2026)</span>
+              <span>Available Doctor Accounts</span>
             </p>
             <div className="flex flex-wrap gap-1.5 pt-1">
               <button

@@ -28,7 +28,7 @@ export const HospitalDashboard = () => {
   const [newDocQual, setNewDocQual] = useState('MBBS, MD');
   const [newDocExp, setNewDocExp] = useState('8 Years');
   const [newDocLicense, setNewDocLicense] = useState('KA-MED-10024');
-  const [newDocPassword, setNewDocPassword] = useState('Doctor@2026');
+  const [newDocPassword, setNewDocPassword] = useState('');
 
   // New Scheme RAG State
   const [schemeTitle, setSchemeTitle] = useState('');
@@ -642,7 +642,7 @@ export const HospitalDashboard = () => {
                     type="password"
                     value={newDocPassword}
                     onChange={e => setNewDocPassword(e.target.value)}
-                    placeholder="Doctor@2026"
+                    placeholder="Enter password"
                     className="glass-input text-xs w-full"
                     required
                   />
