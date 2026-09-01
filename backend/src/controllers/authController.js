@@ -6,7 +6,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'medconnect_karavali_super_secret_j
 
 export const register = async (req, res) => {
   try {
-    const { name, email, phone, password, role, abhaId, otp } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      password,
+      role,
+      abhaId,
+      otp,
+      licenseNumber,
+      specialization,
+      qualification,
+      experience,
+      hospitalName,
+      adminName,
+      address,
+      city,
+    } = req.body;
 
     if (!name || !email || !phone || !password) {
       return res.status(400).json({ success: false, message: 'Missing required registration fields.' });
@@ -40,25 +56,109 @@ export const register = async (req, res) => {
     const userId = `user-${Date.now()}`;
     const userRole = role || 'patient';
     const userAbha = abhaId || `91-${Math.floor(Math.random() * 8999 + 1000)}-${Math.floor(Math.random() * 8999 + 1000)}`;
-    const avatar = name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
+    const avatar = (name || 'MC').split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
+
+    const effectiveHospitalName = hospitalName || (userRole === 'hospital' ? name : null);
 
     const insertQuery = `
-      INSERT INTO users (id, name, email, phone, password_hash, role, abha_id, avatar)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, name, email, phone, role, abha_id as "abhaId", avatar, mfa_enabled as "mfaEnabled", created_at as "createdAt"
+      INSERT INTO users (id, name, email, phone, password_hash, role, abha_id, avatar, hospital_name, specialization, license_number, qualification, experience)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING id, name, email, phone, role, abha_id as "abhaId", avatar, hospital_name as "hospitalName", specialization, mfa_enabled as "mfaEnabled", created_at as "createdAt"
     `;
 
-    const result = await query(insertQuery, [userId, name, email, phone, passwordHash, userRole, userAbha, avatar]);
+    const result = await query(insertQuery, [
+      userId,
+      name,
+      email,
+      phone,
+      passwordHash,
+      userRole,
+      userAbha,
+      avatar,
+      effectiveHospitalName,
+      specialization || null,
+      licenseNumber || null,
+      qualification || null,
+      experience || null,
+    ]);
+
     let newUser = result.rows[0];
     if (!newUser) {
       const fetchResult = await query(
-        'SELECT id, name, email, phone, role, abha_id as "abhaId", avatar, mfa_enabled as "mfaEnabled", created_at as "createdAt" FROM users WHERE id = $1',
+        'SELECT id, name, email, phone, role, abha_id as "abhaId", avatar, hospital_name as "hospitalName", specialization, mfa_enabled as "mfaEnabled", created_at as "createdAt" FROM users WHERE id = $1',
         [userId]
       );
       newUser = fetchResult.rows[0];
     }
 
-    const token = jwt.sign({ id: newUser.id, email: newUser.email, role: newUser.role }, JWT_SECRET, { expiresIn: '7d' });
+    // If registering as doctor, create doctor profile record
+    if (userRole === 'doctor') {
+      try {
+        const docId = `doc-${Date.now()}`;
+        const photo = 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400';
+        const defaultSlots = ['09:30 AM', '11:00 AM', '02:30 PM', '04:15 PM', '06:00 PM'];
+        await query(
+          `INSERT INTO doctors (id, user_id, name, photo, specialization, experience, rating, reviews_count, languages, available_slots, hospital_name, location, distance, consultation_fee, education, bio, is_available_today)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            docId,
+            userId,
+            name.startsWith('Dr.') ? name : `Dr. ${name}`,
+            photo,
+            specialization || 'General Physician',
+            experience || '5 Years',
+            4.8,
+            50,
+            ['English', 'Kannada'],
+            defaultSlots,
+            hospitalName || 'MedConnect Network Hospital',
+            city || 'Mangaluru',
+            '2.0 km',
+            500,
+            qualification || 'MBBS, MD',
+            `Consultant ${specialization || 'General Physician'} with Medical License ${licenseNumber || 'N/A'}.`,
+            1,
+          ]
+        );
+      } catch (docErr) {
+        console.warn('Auto-create doctor record notice:', docErr.message);
+      }
+    }
+
+    // If registering as hospital, create hospital record
+    if (userRole === 'hospital') {
+      try {
+        const hospId = `hosp-${Date.now()}`;
+        const banner = 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=600';
+        const fullLocation = address ? `${address}, ${city || 'Mangaluru'}` : (city || 'Mangaluru, Karnataka');
+        await query(
+          `INSERT INTO hospitals (id, name, banner, location, distance, rating, departments, doctors_count, beds_available, emergency_status, facilities, phone, reviews_count, approved)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            hospId,
+            name,
+            banner,
+            fullLocation,
+            '2.5 km',
+            4.8,
+            ['General Medicine', 'Cardiology', 'Emergency Care', 'Pediatrics'],
+            10,
+            30,
+            'Available',
+            ['24x7 Emergency', 'NABH Compliant', 'ABHA Digital Health'],
+            phone,
+            120,
+            1,
+          ]
+        );
+      } catch (hospErr) {
+        console.warn('Auto-create hospital record notice:', hospErr.message);
+      }
+    }
+
+    const token = jwt.sign({ id: newUser.id, email: newUser.email, role: newUser.role, name: newUser.name }, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({
       success: true,

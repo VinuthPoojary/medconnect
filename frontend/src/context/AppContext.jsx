@@ -374,22 +374,24 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const registerUser = async (name, email, phone, abhaId, password, otp, roleInput = 'patient') => {
+  const registerUser = async (userDataOrName, email, phone, abhaId, password, otp, roleInput = 'patient') => {
     try {
-      const res = await registerApi({
-        name,
+      const payload = typeof userDataOrName === 'object' ? userDataOrName : {
+        name: userDataOrName,
         email,
         phone,
-        password: password || 'MedConnect@2026',
+        password,
         role: roleInput,
         abhaId,
         otp,
-      });
+      };
+
+      const res = await registerApi(payload);
 
       if (res && res.success && res.user) {
         setCurrentUser(res.user);
         setIsAuthenticated(true);
-        const assignedRole = res.user.role || roleInput;
+        const assignedRole = res.user.role || payload.role || 'patient';
         setRoleState(assignedRole);
         setRole(assignedRole);
         try {
