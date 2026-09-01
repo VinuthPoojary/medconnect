@@ -17,8 +17,8 @@ import {
 export const DoctorLoginPage = () => {
   const { login, setActiveView } = useApp();
 
-  const [email, setEmail] = useState('doctor@medconnect.com');
-  const [password, setPassword] = useState('Doctor@2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -175,21 +175,21 @@ export const DoctorLoginPage = () => {
             <div className="flex flex-wrap gap-1.5 pt-1">
               <button
                 type="button"
-                onClick={() => { setEmail('meera@medconnect.com'); setPassword('Doctor@2026'); }}
+                onClick={() => { setEmail('meera@medconnect.com'); setPassword(''); }}
                 className="text-[10px] bg-white border border-slate-200 text-slate-700 font-bold px-2 py-1 rounded-lg hover:border-brand-300 hover:text-brand-700 transition-all cursor-pointer shadow-2xs"
               >
                 Dr. Meera (Father Muller)
               </button>
               <button
                 type="button"
-                onClick={() => { setEmail('vignesh@medconnect.com'); setPassword('Doctor@2026'); }}
+                onClick={() => { setEmail('vignesh@medconnect.com'); setPassword(''); }}
                 className="text-[10px] bg-white border border-slate-200 text-slate-700 font-bold px-2 py-1 rounded-lg hover:border-brand-300 hover:text-brand-700 transition-all cursor-pointer shadow-2xs"
               >
                 Dr. Vignesh (KMC)
               </button>
               <button
                 type="button"
-                onClick={() => { setEmail('santhosh@medconnect.com'); setPassword('Doctor@2026'); }}
+                onClick={() => { setEmail('santhosh@medconnect.com'); setPassword(''); }}
                 className="text-[10px] bg-white border border-slate-200 text-slate-700 font-bold px-2 py-1 rounded-lg hover:border-brand-300 hover:text-brand-700 transition-all cursor-pointer shadow-2xs"
               >
                 Dr. Santhosh (Kasturba)

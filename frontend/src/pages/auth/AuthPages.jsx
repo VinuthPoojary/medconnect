@@ -29,7 +29,7 @@ export const AuthPages = () => {
 
   // Sign In Fields (Mobile No / Email & Password)
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('MedConnect@2026');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   // Registration Fields (Full Info + OTP)
@@ -51,25 +51,13 @@ export const AuthPages = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // When selected role changes, update default credentials
+  // When selected role changes, reset input fields
   const handleRoleTabClick = (roleTabId) => {
     setSelectedRole(roleTabId);
     setError('');
     setSuccess('');
-
-    if (roleTabId === 'patient') {
-      setPhone('+91 98450 12345');
-      setPassword('Patient@2026');
-    } else if (roleTabId === 'doctor') {
-      setPhone('doctor@medconnect.com');
-      setPassword('Doctor@2026');
-    } else if (roleTabId === 'hospital') {
-      setPhone('+91 82420 99887');
-      setPassword('Hospital@2026');
-    } else if (roleTabId === 'admin') {
-      setPhone('+91 82422 11000');
-      setPassword('Admin@2026');
-    }
+    setPhone('');
+    setPassword('');
   };
 
   // When selected role is doctor, sync input with doctor selection
@@ -78,7 +66,7 @@ export const AuthPages = () => {
     const docObj = doctors.find(d => d.id === docId);
     if (docObj) {
       setPhone(docObj.id);
-      setPassword('Doctor@2026');
+      setPassword('');
     }
   };
 
