@@ -1,75 +1,60 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { HeartPulse, Search, PhoneCall, LogIn, LogOut, Menu, X, Sparkles, Activity, ShieldCheck, User } from 'lucide-react';
+import { HeartPulse, PhoneCall, LogOut, Menu, X } from 'lucide-react';
 
 export const Header = () => {
-  const { role, activeView, setActiveView, notifications, setIsEmergencyModalOpen, currentUser, isAuthenticated, requestSignOut } = useApp();
+  const { role, activeView, setActiveView, setIsEmergencyModalOpen, currentUser, isAuthenticated, requestSignOut } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    const q = searchQuery.toLowerCase();
-    if (q.includes('hosp') || q.includes('clinic') || q.includes('kmc') || q.includes('unity')) {
-      setActiveView('hospitals');
-    } else if (q.includes('report') || q.includes('pdf') || q.includes('blood')) {
-      setActiveView('medical-reports');
-    } else {
-      setActiveView('doctors');
-    }
-    setSearchOpen(false);
-  };
+  const isPublicLanding = activeView === 'landing' || (!isAuthenticated && (activeView === 'login' || activeView === 'register'));
 
-  const navLinks = [
+  // Nav links only for authenticated patient view
+  const patientNavLinks = [
+    { id: 'dashboard', label: 'Dashboard' },
     { id: 'doctors', label: 'Doctors' },
     { id: 'hospitals', label: 'Hospitals' },
     { id: 'appointments', label: 'Appointments' },
     { id: 'medical-reports', label: 'Medical Reports' },
-    { id: 'ai-symptom-checker', label: 'AI Health' },
   ];
 
   return (
-    <header className="border-b border-slate-200/90 px-4 lg:px-8 py-3 sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md shadow-2xs">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <header className="border-b border-[#E2E8F0] px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         
         {/* LEFT: Logo & Branding */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div 
-            onClick={() => setActiveView(role === 'guest' ? 'landing' : role === 'patient' ? 'dashboard' : role === 'hospital' ? 'hospital-overview' : 'admin-overview')} 
-            className="flex items-center gap-2.5 cursor-pointer group"
-          >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-teal-600 p-0.5 shadow-xs group-hover:scale-105 transition-transform duration-300">
-              <div className="w-full h-full bg-white rounded-[9px] flex items-center justify-center">
-                <HeartPulse className="w-5 h-5 text-brand-600" />
-              </div>
+        <div 
+          onClick={() => setActiveView(isAuthenticated ? (role === 'doctor' ? 'doctor-dashboard' : role === 'hospital' ? 'hospital-overview' : role === 'admin' ? 'admin-overview' : 'dashboard') : 'landing')} 
+          className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group shrink-0 select-none"
+        >
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-[#2563EB] to-[#0F766E] p-0.5 shadow-2xs group-hover:scale-105 transition-transform duration-300">
+            <div className="w-full h-full bg-white rounded-[9px] flex items-center justify-center">
+              <HeartPulse className="w-4 h-4 sm:w-5 sm:h-5 text-[#2563EB]" />
             </div>
-            <div>
-              <div className="flex items-center gap-1">
-                <span className="font-black text-lg text-slate-900 tracking-tight">MedConnect</span>
-                <span className="text-brand-600 font-black text-lg">Karavali</span>
-              </div>
-              <p className="text-[10px] font-bold text-slate-500 tracking-wide">
-                Smart Healthcare • Coastal Karnataka
-              </p>
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1">
+              <span className="font-black text-base sm:text-lg text-[#0F172A] tracking-tight">MedConnect</span>
+              <span className="text-[#2563EB] font-black text-base sm:text-lg">Karavali</span>
             </div>
+            <p className="text-[10px] font-semibold text-[#64748B] hidden sm:block tracking-tight">
+              Serving Coastal Karnataka
+            </p>
           </div>
         </div>
 
-        {/* CENTER: Navigation Links (Patient & Guest Only) */}
-        {(role === 'patient' || role === 'guest') && (
+        {/* CENTER: Navigation Links (Only shown when authenticated patient) */}
+        {!isPublicLanding && isAuthenticated && role === 'patient' && (
           <nav className="hidden md:flex items-center gap-1 lg:gap-2">
-            {navLinks.map((link) => {
+            {patientNavLinks.map((link) => {
               const isActive = activeView === link.id;
               return (
                 <button
                   key={link.id}
                   onClick={() => setActiveView(link.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-brand-50 text-brand-700 border border-brand-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      ? 'bg-blue-50 text-[#2563EB] border border-blue-200/80 shadow-2xs'
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50'
                   }`}
                 >
                   {link.label}
@@ -79,147 +64,103 @@ export const Header = () => {
           </nav>
         )}
 
-        {/* RIGHT: Search, Emergency SOS, Auth Buttons */}
-        <div className="hidden md:flex items-center gap-2.5 shrink-0">
+        {/* RIGHT: Actions (Emergency SOS, Sign In, Get Started, or User Profile) */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           
-          {/* Quick Search Toggle / Input */}
-          <div className="relative">
-            {searchOpen ? (
-              <form onSubmit={handleSearchSubmit} className="flex items-center gap-1">
-                <input
-                  type="text"
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search doctors, hospitals..."
-                  className="text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 w-44 focus:w-56 transition-all focus:outline-none focus:border-brand-500 font-semibold"
-                />
-                <button type="button" onClick={() => setSearchOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
-                  <X className="w-4 h-4" />
-                </button>
-              </form>
-            ) : (
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors flex items-center gap-1.5 text-xs font-bold"
-                title="Search"
-              >
-                <Search className="w-4 h-4 text-slate-500" />
-                <span className="hidden xl:inline">Search</span>
-              </button>
-            )}
-          </div>
-
-          {/* Emergency 108 Button */}
+          {/* Subtle Emergency 108 Hotline Action */}
           <button
             onClick={() => setIsEmergencyModalOpen(true)}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-xs transition-all"
+            className="flex items-center gap-1 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer shrink-0"
+            title="Emergency 108 Ambulance Hotline"
           >
-            <PhoneCall className="w-3.5 h-3.5 animate-pulse" />
-            <span>Emergency 108</span>
+            <PhoneCall className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-600 shrink-0" />
+            <span className="hidden xs:inline">108 SOS</span>
           </button>
 
-          {/* Auth State Button */}
+          {/* Authenticated State */}
           {isAuthenticated && currentUser ? (
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <button
-                onClick={() => setActiveView(currentUser.role === 'patient' ? 'profile' : 'login')}
-                className="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:border-brand-300 px-3 py-1.5 rounded-xl text-xs font-extrabold text-slate-800 transition-all"
+                onClick={() => setActiveView(currentUser.role === 'patient' ? 'profile' : 'dashboard')}
+                className="flex items-center gap-2 bg-[#F8FAFC] border border-[#E2E8F0] hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-bold text-[#0F172A] transition-all cursor-pointer"
               >
-                <div className="w-5 h-5 rounded-lg bg-brand-600 text-white font-black text-[10px] flex items-center justify-center">
-                  {currentUser.avatar || 'VP'}
+                <div className="w-5 h-5 rounded-lg bg-[#2563EB] text-white font-black text-[10px] flex items-center justify-center">
+                  {currentUser.avatar || currentUser.name?.charAt(0) || 'U'}
                 </div>
-                <span>{currentUser.name?.split(' ')[0]}</span>
+                <span className="truncate max-w-[100px]">{currentUser.name?.split(' ')[0]}</span>
               </button>
 
               <button
                 onClick={requestSignOut}
-                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                className="p-2 text-[#64748B] hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                 title="Sign Out"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            /* Unauthenticated / Landing View Actions */
+            <div className="hidden sm:flex items-center gap-2">
               <button
                 onClick={() => setActiveView('login')}
-                className="text-xs font-extrabold text-slate-700 hover:text-slate-900 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-all"
+                className="text-xs font-bold text-[#0F172A] hover:text-[#2563EB] px-3.5 py-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Sign In
               </button>
               <button
-                onClick={() => setActiveView('login')}
-                className="bg-gradient-to-r from-brand-600 to-teal-600 hover:from-brand-700 hover:to-teal-700 text-white text-xs font-extrabold px-3.5 py-1.5 rounded-xl shadow-xs transition-all flex items-center gap-1"
+                onClick={() => setActiveView('register')}
+                className="bg-gradient-to-r from-[#2563EB] to-[#0F766E] hover:from-[#1D4ED8] hover:to-[#0F766E] text-white text-xs font-bold px-4 py-1.5 rounded-xl shadow-2xs hover:shadow-xs transition-all cursor-pointer"
               >
-                <span>Get Started</span>
+                Get Started
               </button>
             </div>
           )}
-        </div>
 
-        {/* MOBILE MENU TRIGGER */}
-        <div className="flex md:hidden items-center gap-2">
+          {/* MOBILE MENU TOGGLE BUTTON */}
           <button
-            onClick={() => setIsEmergencyModalOpen(true)}
-            className="bg-rose-600 text-white px-2.5 py-1 rounded-lg text-xs font-black shadow-2xs flex items-center gap-1"
-          >
-            <PhoneCall className="w-3.5 h-3.5" />
-            <span>108 SOS</span>
-          </button>
-
-          <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 bg-slate-100 text-slate-800 rounded-xl"
+            className="sm:hidden p-2 text-[#0F172A] hover:bg-slate-100 rounded-xl border border-[#E2E8F0] cursor-pointer"
+            aria-label="Toggle Menu"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
+
         </div>
       </div>
 
-      {/* MOBILE NAV DRAWER */}
+      {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
-        <div className="md:hidden mt-3 pt-3 border-t border-slate-200 space-y-2 pb-2">
-          <div className="grid grid-cols-2 gap-2">
-            {role === 'doctor' ? (
-              [
-                { id: 'doctor-dashboard', label: 'OPD Clinic Queue' },
-                { id: 'doctor-appointments', label: 'My Appointments' },
-                { id: 'doctor-prescriptions', label: 'Issue Prescriptions' },
-                { id: 'doctor-profile', label: 'Doctor Profile' },
-              ].map((link) => (
-                <button
-                  key={link.id}
-                  onClick={() => { setActiveView(link.id); setMobileMenuOpen(false); }}
-                  className="bg-slate-50 border border-slate-200 text-slate-800 p-2.5 rounded-xl text-xs font-extrabold text-left hover:bg-brand-50 hover:text-brand-700 transition-colors"
-                >
-                  {link.label}
-                </button>
-              ))
-            ) : (role === 'patient' || role === 'guest') ? (
-              navLinks.map((link) => (
-                <button
-                  key={link.id}
-                  onClick={() => { setActiveView(link.id); setMobileMenuOpen(false); }}
-                  className="bg-slate-50 border border-slate-200 text-slate-800 p-2.5 rounded-xl text-xs font-extrabold text-left hover:bg-brand-50 hover:text-brand-700 transition-colors"
-                >
-                  {link.label}
-                </button>
-              ))
-            ) : null}
-          </div>
-
-          <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-            {isAuthenticated ? (
-              <button onClick={() => { requestSignOut(); setMobileMenuOpen(false); }} className="text-xs font-extrabold text-rose-600">
+        <div className="sm:hidden mt-3 pt-3 border-t border-[#E2E8F0] space-y-2 pb-1 animate-in fade-in duration-200">
+          {isAuthenticated && currentUser ? (
+            <div className="space-y-2">
+              <div className="p-2.5 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] flex items-center justify-between">
+                <span className="text-xs font-bold text-[#0F172A]">{currentUser.name}</span>
+                <span className="text-[10px] font-bold text-[#2563EB] uppercase">{currentUser.role}</span>
+              </div>
+              <button
+                onClick={() => { requestSignOut(); setMobileMenuOpen(false); }}
+                className="w-full text-center text-xs font-bold text-rose-600 py-2 rounded-xl hover:bg-rose-50"
+              >
                 Sign Out
               </button>
-            ) : (
-              <button onClick={() => { setActiveView('login'); setMobileMenuOpen(false); }} className="w-full bg-brand-600 text-white text-xs font-extrabold py-2.5 rounded-xl">
-                Sign In / Get Started
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={() => { setActiveView('login'); setMobileMenuOpen(false); }}
+                className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] text-xs font-bold py-2.5 rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Sign In
               </button>
-            )}
-          </div>
+              <button
+                onClick={() => { setActiveView('register'); setMobileMenuOpen(false); }}
+                className="w-full bg-gradient-to-r from-[#2563EB] to-[#0F766E] text-white text-xs font-bold py-2.5 rounded-xl shadow-xs"
+              >
+                Get Started
+              </button>
+            </div>
+          )}
         </div>
       )}
     </header>

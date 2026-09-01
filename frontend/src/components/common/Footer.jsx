@@ -1,99 +1,32 @@
 import React from 'react';
-import { useApp } from '../../context/AppContext';
-import { HeartPulse, Sparkles, PhoneCall, MapPin, Send, Database } from 'lucide-react';
 
 export const Footer = () => {
-  const { setActiveView, setIsEmergencyModalOpen, dbConnected } = useApp();
-
   return (
-    <footer className="bg-white border-t border-slate-200/80 text-slate-600 text-xs py-12 px-4 lg:px-8 mt-16 w-full shadow-xs">
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+    <footer className="border-t border-[#E2E8F0] bg-white py-6 px-4 sm:px-6 lg:px-8 w-full mt-auto">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#64748B]">
         
-        {/* Brand Column */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-cyan-500 p-0.5 shadow-md shadow-brand-500/15">
-              <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center">
-                <HeartPulse className="w-5 h-5 text-brand-600" />
-              </div>
-            </div>
-            <div>
-              <span className="font-black text-lg text-slate-900">MedConnect </span>
-              <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent font-black text-lg">Karavali</span>
-            </div>
-          </div>
-
-          <p className="text-slate-600 text-xs leading-relaxed max-w-sm">
-            Empowering Coastal Karnataka with AI-driven triage, real-time queue forecasting, instant report diagnostics, and direct specialist booking across Mangaluru, Udupi & Manipal.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              onClick={() => setIsEmergencyModalOpen(true)}
-              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-xl font-bold shadow-sm text-xs"
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>108 Ambulance Hotline</span>
-            </button>
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-xl bg-slate-50">
-              <Database className={`w-3.5 h-3.5 ${dbConnected ? 'text-emerald-600 animate-pulse' : 'text-amber-500'}`} />
-              <span className="font-bold">{dbConnected ? 'PostgreSQL Connected' : 'Local Standby Mode'}</span>
-            </div>
-          </div>
+        {/* Left: Brand & Copyright */}
+        <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 text-center sm:text-left">
+          <span className="font-bold text-[#0F172A]">MedConnect Karavali</span>
+          <span className="hidden sm:inline text-slate-300">•</span>
+          <span>© 2026 MedConnect Karavali. All rights reserved.</span>
         </div>
 
-        {/* AI Features Column */}
-        <div className="space-y-3">
-          <h4 className="text-slate-900 font-bold text-sm tracking-wide flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-600" /> AI Modules
-          </h4>
-          <ul className="space-y-2">
-            <li><button onClick={() => setActiveView('ai-symptom-checker')} className="hover:text-brand-600 transition-colors">AI Symptom Checker</button></li>
-            <li><button onClick={() => setActiveView('medical-reports')} className="hover:text-brand-600 transition-colors">Medical Report Analyzer</button></li>
-            <li><button onClick={() => setActiveView('smart-recommendation')} className="hover:text-brand-600 transition-colors">Smart Doctor Recommender</button></li>
-            <li><button onClick={() => setActiveView('queue-prediction')} className="hover:text-brand-600 transition-colors">Live Queue Predictor</button></li>
-            <li><button onClick={() => setActiveView('ai-chatbot')} className="hover:text-brand-600 transition-colors">24/7 AI Medical Assistant</button></li>
-          </ul>
+        {/* Right: Legal & Contact Links */}
+        <div className="flex items-center gap-4 text-xs font-medium">
+          <a href="#privacy" onClick={(e) => e.preventDefault()} className="hover:text-[#0F172A] transition-colors">
+            Privacy Policy
+          </a>
+          <span className="text-slate-300">•</span>
+          <a href="#terms" onClick={(e) => e.preventDefault()} className="hover:text-[#0F172A] transition-colors">
+            Terms
+          </a>
+          <span className="text-slate-300">•</span>
+          <a href="#contact" onClick={(e) => e.preventDefault()} className="hover:text-[#0F172A] transition-colors">
+            Contact
+          </a>
         </div>
 
-        {/* Top Hospitals */}
-        <div className="space-y-3">
-          <h4 className="text-slate-900 font-bold text-sm tracking-wide flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-emerald-600" /> Karavali Hubs
-          </h4>
-          <ul className="space-y-2">
-            <li><span className="text-slate-700">KMC Health City, Mangaluru</span></li>
-            <li><span className="text-slate-700">Yenepoya Specialty Center</span></li>
-            <li><span className="text-slate-700">AJ Hospital & Research</span></li>
-            <li><span className="text-slate-700">Father Muller Medical Hub</span></li>
-            <li><span className="text-slate-700">Kasturba Hospital, Manipal</span></li>
-          </ul>
-        </div>
-
-        {/* Newsletter & Contact */}
-        <div className="space-y-3">
-          <h4 className="text-slate-900 font-bold text-sm tracking-wide">Health Updates</h4>
-          <p className="text-[11px] text-slate-500">Receive verified medical tips & regional emergency alerts.</p>
-          <div className="flex items-center gap-1">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-600 w-full"
-            />
-            <button className="bg-brand-600 hover:bg-brand-500 text-white p-2 rounded-xl">
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full pt-6 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px]">
-        <p>© 2026 MedConnect Karavali. AI Healthcare Platform for Coastal Karnataka. All Rights Reserved.</p>
-        <div className="flex items-center gap-4 text-slate-500">
-          <span className="hover:text-slate-800 cursor-pointer">Privacy Policy</span>
-          <span className="hover:text-slate-800 cursor-pointer">Terms of Service</span>
-          <span className="hover:text-slate-800 cursor-pointer">Medical Disclaimer</span>
-        </div>
       </div>
     </footer>
   );

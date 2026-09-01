@@ -147,7 +147,7 @@ const MainLayout = () => {
 
       <div className="flex-1 flex w-full">
         <Sidebar />
-        <main className="flex-1 p-4 lg:p-6 min-w-0 w-full">
+        <main className={`flex-1 min-w-0 w-full ${activeView === 'landing' ? 'p-0' : 'p-4 lg:p-6'}`}>
           {renderContent()}
         </main>
       </div>
