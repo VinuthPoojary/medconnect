@@ -26,7 +26,7 @@ export const Sidebar = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (role === 'guest' || activeView === 'landing' || activeView === 'login' || activeView === 'register') {
+  if (role === 'guest' || activeView === 'landing' || activeView === 'login' || activeView === 'register' || activeView === 'doctor-login' || activeView === 'hospital-login') {
     return null;
   }
 
@@ -39,6 +39,7 @@ export const Sidebar = () => {
         { view: 'appointments', label: 'Appointments', icon: <Calendar className="w-4 h-4" /> },
         { view: 'doctors', label: 'Doctors', icon: <UserCheck className="w-4 h-4" /> },
         { view: 'hospitals', label: 'Hospitals', icon: <Building2 className="w-4 h-4" /> },
+        { view: 'healthcare-info', label: 'Healthcare Info (RAG)', icon: <Sparkles className="w-4 h-4 text-brand-600" />, isAi: true },
       ]
     },
     {

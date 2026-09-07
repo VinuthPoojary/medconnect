@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS users (
   experience VARCHAR(50),
   license_number VARCHAR(100),
   mfa_enabled BOOLEAN DEFAULT TRUE,
+  login_enabled BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -72,6 +73,7 @@ CREATE TABLE IF NOT EXISTS hospitals (
   email VARCHAR(255) UNIQUE,
   phone VARCHAR(50) UNIQUE,
   password_hash VARCHAR(255),
+  login_enabled BOOLEAN DEFAULT TRUE,
   banner TEXT,
   location VARCHAR(255) NOT NULL,
   distance VARCHAR(50),
@@ -81,17 +83,6 @@ CREATE TABLE IF NOT EXISTS hospitals (
   beds_available INT DEFAULT 25,
   emergency_status VARCHAR(50) DEFAULT 'Available',
   facilities TEXT[],
-  reviews_count INT DEFAULT 300,
-  approved BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-  departments TEXT[],
-  doctors_count INT DEFAULT 100,
-  beds_available INT DEFAULT 25,
-  emergency_status VARCHAR(50) DEFAULT 'Available',
-  facilities TEXT[],
-  phone VARCHAR(50),
   reviews_count INT DEFAULT 300,
   approved BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -196,6 +187,27 @@ CREATE TABLE IF NOT EXISTS hospital_schemes (
   content_text TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 9b. Dedicated Hospital Documents Table (Isolated Document Management & Grounded RAG)
+CREATE TABLE IF NOT EXISTS hospital_documents (
+  id VARCHAR(100) PRIMARY KEY,
+  hospital_id VARCHAR(100) NOT NULL,
+  hospital_name VARCHAR(255) NOT NULL,
+  document_name VARCHAR(255) NOT NULL,
+  document_type VARCHAR(100) NOT NULL,
+  version VARCHAR(50) DEFAULT '1.0',
+  file_url TEXT,
+  file_path TEXT,
+  file_size BIGINT,
+  status VARCHAR(50) DEFAULT 'Indexed',
+  uploaded_by VARCHAR(255) DEFAULT 'Hospital Administration',
+  page_count INT DEFAULT 1,
+  content_text TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_hosp_docs_hosp_id ON hospital_documents (hospital_id, created_at DESC);
 
 -- 10. Prescriptions Table
 CREATE TABLE IF NOT EXISTS prescriptions (

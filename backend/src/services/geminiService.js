@@ -394,25 +394,110 @@ User Query: "${userMessage}"
 
 /**
  * 3. RAG Hospital Knowledge Assistant with Grounded Context (Retrieval-Augmented Generation)
+ * Strictly grounded in selected hospital's uploaded documents with zero cross-hospital leakage.
  */
 export const queryHospitalRagWithGemini = async (hospitalName, query, hospitalDocuments = []) => {
+  if (!hospitalDocuments || hospitalDocuments.length === 0) {
+    return {
+      answer: "I couldn't find enough information about this in the available hospital documents.",
+      sources: [],
+      confidence: 0,
+      isGrounded: false,
+    };
+  }
+
+  // 1. Chunk and index documents with explicit page references
+  const chunks = [];
+  const queryLower = query.toLowerCase();
+  const queryTerms = queryLower.split(/\s+/).filter(w => w.length > 2);
+
+  for (const doc of hospitalDocuments) {
+    const docTitle = doc.document_name || doc.documentName || doc.scheme_title || doc.schemeTitle || 'Hospital Document';
+    const docType = doc.document_type || doc.documentType || doc.category || 'Hospital Policy';
+    const fullText = doc.content_text || doc.contentText || doc.description || '';
+    
+    // Split by page markers (e.g. "Pages 1-3:", "Page 4:") or paragraphs
+    const pageSections = fullText.split(/(?=Pages?\s+\d+[\s–\-0-9]*:)/i);
+
+    pageSections.forEach((section, idx) => {
+      const pageMatch = section.match(/Pages?\s+(\d+[\s–\-0-9]*):/i);
+      const pages = pageMatch ? `Pages ${pageMatch[1].trim()}` : `Section ${idx + 1}`;
+      const cleanContent = section.replace(/Pages?\s+\d+[\s–\-0-9]*:/i, '').trim();
+
+      if (cleanContent.length > 20) {
+        // Calculate keyword & semantic relevance score
+        let score = 0;
+        const sectionLower = cleanContent.toLowerCase();
+        
+        queryTerms.forEach(term => {
+          if (sectionLower.includes(term)) score += 2;
+          if (docTitle.toLowerCase().includes(term)) score += 3;
+        });
+
+        // Specific high-value medical/policy term matching
+        if ((queryLower.includes('ayushman') || queryLower.includes('pm-jay')) && sectionLower.includes('ayushman')) score += 5;
+        if ((queryLower.includes('insurance') || queryLower.includes('cashless') || queryLower.includes('tpa')) && (sectionLower.includes('insurance') || sectionLower.includes('cashless') || sectionLower.includes('tpa'))) score += 5;
+        if ((queryLower.includes('bpl') || queryLower.includes('ration') || queryLower.includes('eligibility')) && (sectionLower.includes('eligib') || sectionLower.includes('bpl') || sectionLower.includes('ration'))) score += 5;
+        if ((queryLower.includes('opd') || queryLower.includes('timing') || queryLower.includes('fee')) && (sectionLower.includes('opd') || sectionLower.includes('timing') || sectionLower.includes('fee'))) score += 5;
+        if ((queryLower.includes('emergency') || queryLower.includes('trauma') || queryLower.includes('ambulance')) && (sectionLower.includes('emergency') || sectionLower.includes('trauma') || sectionLower.includes('icu'))) score += 5;
+
+        chunks.push({
+          documentName: docTitle,
+          documentType: docType,
+          pages,
+          content: cleanContent,
+          score,
+        });
+      }
+    });
+  }
+
+  // 2. Sort chunks by relevance score and apply relevance threshold
+  chunks.sort((a, b) => b.score - a.score);
+  const relevantChunks = chunks.filter(c => c.score > 0).slice(0, 4);
+
+  // Anti-hallucination guard: If no chunks scored relevantly
+  if (relevantChunks.length === 0) {
+    return {
+      answer: "I couldn't find enough information about this in the available hospital documents.",
+      sources: [],
+      confidence: 0.1,
+      isGrounded: false,
+    };
+  }
+
+  const contextText = relevantChunks
+    .map(c => `[DOCUMENT: ${c.documentName} | ${c.pages} | Category: ${c.documentType}]\n${c.content}`)
+    .join('\n\n---\n\n');
+
+  const sourcesList = relevantChunks.map(c => ({
+    documentName: c.documentName,
+    pages: c.pages,
+    category: c.documentType,
+    excerpt: c.content.substring(0, 160) + '...',
+  }));
+
   const client = getAiClient();
-
-  const docContext = hospitalDocuments.length > 0
-    ? hospitalDocuments.map(d => `--- Document: ${d.schemeTitle} (${d.category}) ---\nCoverage: ${d.coverageAmount}\nEligibility: ${d.eligibility}\nOfficial Rules: ${d.contentText || d.description}`).join('\n\n')
-    : `Official Hospital Policy: ${hospitalName} accepts Ayushman Bharat PM-JAY (100% Cashless up to ₹5 Lakhs), Arogya Karnataka, Star Health, HDFC Ergo, and BPL cardholder discounts. OPD registration fee is ₹250. Emergency services operate 24x7.`;
-
   if (client) {
     try {
       const prompt = `
-You are the official RAG Knowledge Assistant for ${hospitalName}.
-Answer the patient's inquiry strictly and accurately using ONLY the official hospital document context below.
-Do not invent information. If the document specifies coverage, eligibility, or rules, state them clearly.
+You are the official MedConnect RAG Knowledge Assistant for ${hospitalName}.
+Your duty is strictly and solely to answer the patient's inquiry based on the official hospital document context below.
 
-[OFFICIAL HOSPITAL KNOWLEDGE BASE - ${hospitalName}]
-${docContext}
+CRITICAL ANTI-HALLUCINATION RULES:
+1. Answer ONLY using facts directly stated in the provided document context.
+2. If the document context does NOT contain enough details to answer the question, state:
+   "I couldn't find enough information about this in the available hospital documents."
+3. Do NOT guess, extrapolate, or use general outside medical/administrative knowledge.
+4. Do NOT invent prices, eligibility rules, benefits, dates, requirements, or procedures.
+5. In your answer, explicitly mention the source document title and pages (e.g., "According to the uploaded Ayushman Bharat Guidelines (Pages 4–5)...").
+
+[VERIFIED OFFICIAL HOSPITAL DOCUMENTS FOR ${hospitalName}]
+${contextText}
 
 Patient Question: "${query}"
+
+Return your answer clearly, empathetically, and factually:
 `;
 
       const response = await client.models.generateContent({
@@ -420,14 +505,30 @@ Patient Question: "${query}"
         contents: prompt,
       });
 
-      if (response.text) {
-        return response.text;
+      if (response.text && response.text.trim()) {
+        const aiText = response.text.trim();
+        return {
+          answer: aiText,
+          sources: sourcesList,
+          confidence: 0.95,
+          isGrounded: true,
+          hospitalName,
+        };
       }
     } catch (err) {
-      console.warn('⚠️ RAG Gemini API call failed, using grounded fallback:', err.message);
+      console.warn('⚠️ Gemini RAG call error, using deterministic grounded fallback:', err.message);
     }
   }
 
-  // Grounded RAG Fallback
-  return `Based on official documents uploaded by ${hospitalName}: ${hospitalName} accepts Ayushman Bharat PM-JAY and Arogya Karnataka for 100% cashless inpatient treatment up to ₹5,00.000 per family. Eligible cardholders (BPL/ABHA) receive priority OPD clearance and covered surgical packages.`;
+  // Deterministic Grounded Fallback Response (Guaranteed Factually True to Context)
+  const topChunk = relevantChunks[0];
+  const groundedAnswer = `According to the official document "${topChunk.documentName}" (${topChunk.pages}) uploaded by ${hospitalName}: ${topChunk.content.substring(0, 320)}.`;
+
+  return {
+    answer: groundedAnswer,
+    sources: sourcesList,
+    confidence: 0.88,
+    isGrounded: true,
+    hospitalName,
+  };
 };

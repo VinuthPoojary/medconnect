@@ -247,6 +247,25 @@ export const getLiveQueue = async (req, res) => {
 };
 
 /**
+ * In-memory concurrency mutex locks for atomic appointment slot bookings
+ */
+const slotLocks = new Map();
+const withSlotLock = async (lockKey, asyncFn) => {
+  while (slotLocks.has(lockKey)) {
+    await slotLocks.get(lockKey);
+  }
+  let resolver;
+  const promise = new Promise((resolve) => { resolver = resolve; });
+  slotLocks.set(lockKey, promise);
+  try {
+    return await asyncFn();
+  } finally {
+    slotLocks.delete(lockKey);
+    resolver();
+  }
+};
+
+/**
  * POST /api/appointments
  * Create a single appointment with atomic sequential queue generation & duplicate prevention
  */
@@ -356,109 +375,117 @@ export const createAppointment = async (req, res) => {
     }
     const cleanSlot = (timeSlot || '09:30 AM').trim();
 
-    // 4. Duplicate Check: Prevent duplicate active booking by same patient for same doctor + date + timeSlot
-    const duplicateCheck = await query(
-      `SELECT id FROM appointments 
-       WHERE user_id = $1 
-         AND (doctor_id = $2 OR doctor_id = $3) 
-         AND date = $4 
-         AND time_slot = $5 
-         AND LOWER(status) NOT IN ('cancelled', 'no_show')
-       LIMIT 1`,
-      [userId, finalDocId, finalDocId.replace('user-doc-', 'doc-'), cleanDate, cleanSlot]
-    );
+    // 4. Atomic Concurrency Lock per (Doctor, Date, Slot) to ensure atomic sequential queue and prevent race condition double booking
+    const slotLockKey = `${finalDocId}_${cleanDate}_${cleanSlot}`;
 
-    if (duplicateCheck.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message:
+    const newAptData = await withSlotLock(slotLockKey, async () => {
+      // 4a. Duplicate Check: Prevent duplicate active booking by same patient for same doctor + date + timeSlot
+      const duplicateCheck = await query(
+        `SELECT id FROM appointments 
+         WHERE user_id = $1 
+           AND (doctor_id = $2 OR doctor_id = $3) 
+           AND date = $4 
+           AND time_slot = $5 
+           AND LOWER(status) NOT IN ('cancelled', 'no_show')
+         LIMIT 1`,
+        [userId, finalDocId, finalDocId.replace('user-doc-', 'doc-'), cleanDate, cleanSlot]
+      );
+
+      if (duplicateCheck.rows.length > 0) {
+        const err = new Error(
           'You already have an active appointment booked with this doctor on ' +
           cleanDate +
           ' at ' +
           cleanSlot +
-          '.',
-      });
-    }
+          '.'
+        );
+        err.statusCode = 409;
+        throw err;
+      }
 
-    // 5. Concurrency-Safe Sequential Queue Token Generation (#1, #2, #3...) scoped strictly to (doctor_id, date, time_slot)
-    const tokenRes = await query(
-      `SELECT COALESCE(MAX(queue_number), 0) + 1 as "nextToken"
-       FROM appointments 
-       WHERE (doctor_id = $1 OR doctor_id = $2) 
-         AND date = $3 
-         AND time_slot = $4`,
-      [finalDocId, finalDocId.replace('user-doc-', 'doc-'), cleanDate, cleanSlot]
-    );
-
-    const queueNumber = parseInt(tokenRes.rows[0]?.nextToken || '1', 10);
-
-    // 6. Count active waiting patients ahead in this specific session
-    const aheadRes = await query(
-      `SELECT COUNT(*) as count 
-       FROM appointments 
-       WHERE (doctor_id = $1 OR doctor_id = $2) 
-         AND date = $3 
-         AND time_slot = $4
-         AND LOWER(status) IN ('waiting', 'in_consultation', 'called')`,
-      [finalDocId, finalDocId.replace('user-doc-', 'doc-'), cleanDate, cleanSlot]
-    );
-
-    const patientsAhead = parseInt(aheadRes.rows[0]?.count || '0', 10);
-    const estimatedWaitMinutes = patientsAhead * 10;
-    const estimatedWaitTime =
-      estimatedWaitMinutes > 0
-        ? `~${estimatedWaitMinutes} minutes`
-        : 'Immediate (~2 mins)';
-    const meetingUrl =
-      type === 'online'
-        ? `https://medconnect.karavali.ai/telehealth/room-${Math.floor(
-            Math.random() * 8999 + 1000
-          )}`
-        : null;
-
-    const aptId = `apt-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`;
-
-    // 7. Insert appointment into database with status = 'waiting' and assigned queue_number
-    const insertQuery = `
-      INSERT INTO appointments (
-        id, user_id, doctor_id, doctor_name, doctor_photo, specialization, hospital_name, date, time_slot, queue_number, estimated_wait_time, status, type, patient_name, meeting_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      RETURNING id, user_id as "userId", doctor_id as "doctorId", doctor_name as "doctorName", doctor_photo as "doctorPhoto", specialization, hospital_name as "hospitalName", date, time_slot as "timeSlot", queue_number as "queueNumber", estimated_wait_time as "estimatedWaitTime", status, type, patient_name as "patientName", meeting_url as "meetingUrl", created_at as "createdAt"
-    `;
-
-    const result = await query(insertQuery, [
-      aptId,
-      userId,
-      finalDocId,
-      finalDocName,
-      finalDocPhoto,
-      finalSpec,
-      finalHospName,
-      cleanDate,
-      cleanSlot,
-      queueNumber,
-      estimatedWaitTime,
-      'waiting',
-      type || 'offline',
-      finalPatientName,
-      meetingUrl,
-    ]);
-
-    let newApt = result.rows[0];
-    if (!newApt) {
-      const fetchRes = await query(
-        'SELECT id, user_id as "userId", doctor_id as "doctorId", doctor_name as "doctorName", doctor_photo as "doctorPhoto", specialization, hospital_name as "hospitalName", date, time_slot as "timeSlot", queue_number as "queueNumber", estimated_wait_time as "estimatedWaitTime", status, type, patient_name as "patientName", meeting_url as "meetingUrl", created_at as "createdAt" FROM appointments WHERE id = $1',
-        [aptId]
+      // 4b. Concurrency-Safe Sequential Queue Token Generation (#1, #2, #3...) scoped strictly to (doctor_id, date, time_slot)
+      const tokenRes = await query(
+        `SELECT COALESCE(MAX(queue_number), 0) + 1 as "nextToken"
+         FROM appointments 
+         WHERE (doctor_id = $1 OR doctor_id = $2) 
+           AND date = $3 
+           AND time_slot = $4`,
+        [finalDocId, finalDocId.replace('user-doc-', 'doc-'), cleanDate, cleanSlot]
       );
-      newApt = fetchRes.rows[0];
-    }
 
-    const payload = {
-      ...newApt,
-      tokenNumber: `#0${queueNumber}`,
-      patientsAhead,
-      expectedPosition: queueNumber,
-    };
+      const queueNumber = parseInt(tokenRes.rows[0]?.nextToken || '1', 10);
+
+      // 4c. Count active waiting patients ahead in this specific session
+      const aheadRes = await query(
+        `SELECT COUNT(*) as count 
+         FROM appointments 
+         WHERE (doctor_id = $1 OR doctor_id = $2) 
+           AND date = $3 
+           AND time_slot = $4
+           AND LOWER(status) IN ('waiting', 'in_consultation', 'called')`,
+        [finalDocId, finalDocId.replace('user-doc-', 'doc-'), cleanDate, cleanSlot]
+      );
+
+      const patientsAhead = parseInt(aheadRes.rows[0]?.count || '0', 10);
+      const estimatedWaitMinutes = patientsAhead * 10;
+      const estimatedWaitTime =
+        estimatedWaitMinutes > 0
+          ? `~${estimatedWaitMinutes} minutes`
+          : 'Immediate (~2 mins)';
+      const meetingUrl =
+        type === 'online'
+          ? `https://medconnect.karavali.ai/telehealth/room-${Math.floor(
+              Math.random() * 8999 + 1000
+            )}`
+          : null;
+
+      const aptId = `apt-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`;
+
+      // 4d. Insert appointment into database with status = 'waiting' and assigned queue_number
+      const insertQuery = `
+        INSERT INTO appointments (
+          id, user_id, doctor_id, doctor_name, doctor_photo, specialization, hospital_name, date, time_slot, queue_number, estimated_wait_time, status, type, patient_name, meeting_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING id, user_id as "userId", doctor_id as "doctorId", doctor_name as "doctorName", doctor_photo as "doctorPhoto", specialization, hospital_name as "hospitalName", date, time_slot as "timeSlot", queue_number as "queueNumber", estimated_wait_time as "estimatedWaitTime", status, type, patient_name as "patientName", meeting_url as "meetingUrl", created_at as "createdAt"
+      `;
+
+      const result = await query(insertQuery, [
+        aptId,
+        userId,
+        finalDocId,
+        finalDocName,
+        finalDocPhoto,
+        finalSpec,
+        finalHospName,
+        cleanDate,
+        cleanSlot,
+        queueNumber,
+        estimatedWaitTime,
+        'waiting',
+        type || 'offline',
+        finalPatientName,
+        meetingUrl,
+      ]);
+
+      let newApt = result.rows[0];
+      if (!newApt) {
+        const fetchRes = await query(
+          'SELECT id, user_id as "userId", doctor_id as "doctorId", doctor_name as "doctorName", doctor_photo as "doctorPhoto", specialization, hospital_name as "hospitalName", date, time_slot as "timeSlot", queue_number as "queueNumber", estimated_wait_time as "estimatedWaitTime", status, type, patient_name as "patientName", meeting_url as "meetingUrl", created_at as "createdAt" FROM appointments WHERE id = $1',
+          [aptId]
+        );
+        newApt = fetchRes.rows[0];
+      }
+
+      return {
+        ...newApt,
+        tokenNumber: `#0${queueNumber}`,
+        patientsAhead,
+        expectedPosition: queueNumber,
+        queueNumber,
+      };
+    });
+
+    const payload = newAptData;
 
     // 8. Broadcast Real-Time WebSockets Event to Doctor & Patient Dashboards with precise scoping
     try {
@@ -484,6 +511,12 @@ export const createAppointment = async (req, res) => {
       queueNumber,
     });
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
     if (error.code === '23505' || error.message?.includes('UNIQUE constraint')) {
       return res.status(409).json({
         success: false,

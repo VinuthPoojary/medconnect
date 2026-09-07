@@ -25,19 +25,31 @@ import { EmergencyPage } from './pages/patient/EmergencyPage';
 import { NotificationsPage } from './pages/patient/NotificationsPage';
 import { ProfilePage } from './pages/patient/ProfilePage';
 import { HospitalDashboard } from './pages/hospital/HospitalDashboard';
+import { HospitalLoginPage } from './pages/hospital/HospitalLoginPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
 import { DoctorLoginPage } from './pages/doctor/DoctorLoginPage';
+import { HealthcareInformation } from './pages/patient/HealthcareInformation';
 
 const MainLayout = () => {
   const { activeView, isAuthenticated, currentUser } = useApp();
 
   const renderContent = () => {
-    const publicViews = ['landing', 'login', 'register', 'forgot-password', 'doctor-login'];
+    const publicViews = ['landing', 'login', 'register', 'forgot-password', 'doctor-login', 'hospital-login'];
+
+    // Dedicated Hospital Login route
+    if (activeView === 'hospital-login') {
+      return <HospitalLoginPage />;
+    }
 
     // Dedicated Doctor Login route
     if (activeView === 'doctor-login') {
       return <DoctorLoginPage />;
+    }
+
+    // PRODUCTION AUTH GUARD: Unauthenticated users targeting hospital portal redirect to Hospital Login
+    if (!isAuthenticated && activeView.startsWith('hospital-')) {
+      return <HospitalLoginPage />;
     }
 
     // PRODUCTION AUTH GUARD: Unauthenticated users targeting doctor portal redirect to Doctor Login
@@ -48,6 +60,11 @@ const MainLayout = () => {
     // PRODUCTION AUTH GUARD: Unauthenticated users are redirected to Login Page
     if (!isAuthenticated && !publicViews.includes(activeView)) {
       return <AuthPages />;
+    }
+
+    // Role-based Hospital Dashboard redirection
+    if (currentUser?.role === 'hospital' && (activeView === 'dashboard' || activeView === 'hospital-dashboard' || activeView === 'hospital-overview')) {
+      return <HospitalDashboard />;
     }
 
     // Role-based Doctor Dashboard redirection
@@ -61,6 +78,9 @@ const MainLayout = () => {
 
       case 'doctor-login':
         return <DoctorLoginPage />;
+
+      case 'hospital-login':
+        return <HospitalLoginPage />;
 
       case 'login':
       case 'register':
@@ -81,6 +101,9 @@ const MainLayout = () => {
       case 'hospitals':
       case 'hospital-details':
         return <HospitalPage />;
+
+      case 'healthcare-info':
+        return <HealthcareInformation />;
 
       case 'appointments':
         return <AppointmentsPage />;
@@ -124,6 +147,7 @@ const MainLayout = () => {
       case 'doctor-profile':
         return <DoctorDashboard />;
 
+      case 'hospital-dashboard':
       case 'hospital-overview':
       case 'manage-doctors':
       case 'hospital-appointments':

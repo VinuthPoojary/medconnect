@@ -240,7 +240,33 @@ export const PatientDashboard = () => {
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
+        </div>
 
+        {/* Highlighted Banner: Hospital Healthcare Knowledge Base & Document AI (RAG) */}
+        <div
+          onClick={() => setActiveView('healthcare-info')}
+          className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-md hover:shadow-lg transition-all cursor-pointer flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-blue-800"
+        >
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[11px] font-bold border border-cyan-400/30">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Hospital Document AI & Live Knowledge Base</span>
+            </div>
+            <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
+              Official Hospital Guides, Schedules & Document RAG Q&A
+            </h3>
+            <p className="text-xs text-blue-200/80 font-medium max-w-2xl">
+              Search verified OPD timings, trauma SOPs, ICU visitor rules, and tariffs with page citations across all Coastal Karnataka hospitals.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="px-5 py-2.5 bg-white hover:bg-blue-50 text-blue-950 font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md shrink-0"
+          >
+            <span>Explore Documents & Ask AI</span>
+            <ArrowRight className="w-4 h-4 text-brand-700" />
+          </button>
         </div>
       </section>
 

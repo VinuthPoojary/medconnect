@@ -77,6 +77,10 @@ export const AuthPages = () => {
     setSuccess('');
     setPhone('');
     setPassword('');
+    // Non-patient roles are not eligible for public self-registration
+    if (roleTabId === 'doctor' || roleTabId === 'hospital' || roleTabId === 'admin') {
+      setMode('login');
+    }
   };
 
   // When selected role is doctor in login mode, sync doctor ID
@@ -381,6 +385,39 @@ export const AuthPages = () => {
                 </div>
               )}
 
+              {/* Hospital Role in Login: Quick Selector for Existing Hospitals */}
+              {selectedRole === 'hospital' && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-[#0F172A]">
+                      Select Existing Hospital (or enter email below)
+                    </label>
+                    <span className="text-[10px] font-semibold text-[#0F766E] bg-[#F0FDFA] px-2 py-0.5 rounded-md border border-[#CCFBF1]">
+                      8 Hospitals
+                    </span>
+                  </div>
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setPhone(e.target.value);
+                      }
+                    }}
+                    defaultValue=""
+                    className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
+                  >
+                    <option value="" disabled>-- Select a Hospital to Autofill Email --</option>
+                    <option value="kmchospital@medconnectkaravali.com">KMC Hospital (kmchospital@medconnectkaravali.com)</option>
+                    <option value="ajhospital-002@medconnectkaravali.com">AJ Hospital & Research Centre (ajhospital-002@medconnectkaravali.com)</option>
+                    <option value="fathermullermedicalcollegehospital-002@medconnectkaravali.com">Father Muller Medical College Hospital (fathermullermedicalcollegehospital-002@medconnectkaravali.com)</option>
+                    <option value="kasturbahospital-002@medconnectkaravali.com">Kasturba Hospital Manipal (kasturbahospital-002@medconnectkaravali.com)</option>
+                    <option value="yenepoyaspecialtyhospital-002@medconnectkaravali.com">Yenepoya Specialty Hospital (yenepoyaspecialtyhospital-002@medconnectkaravali.com)</option>
+                    <option value="indianahospital-002@medconnectkaravali.com">Indiana Hospital & Heart Institute (indianahospital-002@medconnectkaravali.com)</option>
+                    <option value="kshegdecharitablehospital-002@medconnectkaravali.com">KS Hegde Charitable Hospital (kshegdecharitablehospital-002@medconnectkaravali.com)</option>
+                    <option value="governmentdistrictwenlockhospital-002@medconnectkaravali.com">Govt District Wenlock Hospital (governmentdistrictwenlockhospital-002@medconnectkaravali.com)</option>
+                  </select>
+                </div>
+              )}
+
               {/* Login Identifier Field */}
               <div>
                 <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">
@@ -411,7 +448,7 @@ export const AuthPages = () => {
                         : selectedRole === 'doctor'
                         ? 'doctor@medconnect.com'
                         : selectedRole === 'hospital'
-                        ? 'hospital@medconnect.com'
+                        ? 'kmchospital@medconnectkaravali.com'
                         : '+91 98450 12345 or patient@medconnect.com'
                     }
                     className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
@@ -471,19 +508,44 @@ export const AuthPages = () => {
                 </div>
               )}
 
-              {/* Toggle to Register (For non-admin roles) */}
-              {selectedRole !== 'admin' && (
+              {/* Hospital Note if Hospital selected */}
+              {selectedRole === 'hospital' && (
+                <div className="p-3 bg-[#F0FDFA] rounded-xl border border-[#CCFBF1] text-center">
+                  <p className="text-[11px] text-[#0F766E] font-medium flex items-center justify-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 shrink-0 text-[#0F766E]" />
+                    <span>Authorized hospital portal. Protected by ABDM Security Standard.</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Role-Specific Sign-In Footers */}
+              {selectedRole === 'patient' ? (
                 <div className="text-center text-xs text-[#64748B] mt-6 pt-4 border-t border-[#E2E8F0] font-medium">
-                  Don't have an account?{' '}
+                  Don't have a patient account?{' '}
                   <button
                     type="button"
                     onClick={() => { setMode('register'); setError(''); setSuccess(''); }}
                     className="font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline transition-colors ml-1 cursor-pointer"
                   >
-                    Create your account
+                    Create Patient Account
                   </button>
                 </div>
-              )}
+              ) : selectedRole === 'doctor' ? (
+                <div className="p-3.5 bg-[#F0FDFA] rounded-2xl border border-[#CCFBF1] text-center mt-4 space-y-1">
+                  <p className="text-xs font-bold text-[#0F766E] flex items-center justify-center gap-1.5">
+                    <Stethoscope className="w-4 h-4 text-[#0F766E]" />
+                    <span>Hospital-Managed Doctor Account</span>
+                  </p>
+                  <p className="text-[11px] text-[#0F766E]/80 font-medium">
+                    Doctor accounts are created exclusively by Hospital Administration in the Hospital Portal.
+                  </p>
+                </div>
+              ) : selectedRole === 'hospital' ? (
+                <div className="text-center text-[11px] text-[#64748B] mt-6 pt-4 border-t border-[#E2E8F0] font-medium">
+                  Authorized hospital accounts only. For access inquiries, contact{' '}
+                  <span className="font-bold text-[#0F766E]">support@medconnectkaravali.com</span>
+                </div>
+              ) : null}
 
             </form>
           ) : (
@@ -640,432 +702,7 @@ export const AuthPages = () => {
                 </div>
               )}
 
-              {/* ------------------------------------------------------------ */}
-              {/* 2. DOCTOR REGISTRATION FORM                                  */}
-              {/* ------------------------------------------------------------ */}
-              {selectedRole === 'doctor' && (
-                <div className="space-y-4">
-                  
-                  {/* Full Name & Medical License (2-Col) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Full Name</label>
-                      <div className="relative flex items-center group">
-                        <User className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="text"
-                          required
-                          value={regName}
-                          onChange={(e) => setRegName(e.target.value)}
-                          placeholder="Dr. Vignesh Shetty"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">
-                        Medical License / Reg. No.
-                      </label>
-                      <div className="relative flex items-center group">
-                        <FileCheck className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="text"
-                          required
-                          value={regLicenseNumber}
-                          onChange={(e) => setRegLicenseNumber(e.target.value)}
-                          placeholder="e.g. KMC-10482"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Specialization & Email (2-Col) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Specialization</label>
-                      <div className="relative flex items-center group">
-                        <Stethoscope className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <select
-                          value={regSpecialization}
-                          onChange={(e) => setRegSpecialization(e.target.value)}
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer"
-                          style={{ paddingLeft: '2.5rem' }}
-                        >
-                          <option value="Cardiologist">Cardiologist</option>
-                          <option value="Neurologist">Neurologist</option>
-                          <option value="Orthopedic Surgeon">Orthopedic Surgeon</option>
-                          <option value="Pediatrician">Pediatrician</option>
-                          <option value="General Physician">General Physician</option>
-                          <option value="Dermatologist">Dermatologist</option>
-                          <option value="Gynecologist">Gynecologist</option>
-                          <option value="ENT Specialist">ENT Specialist</option>
-                          <option value="Psychiatrist">Psychiatrist</option>
-                          <option value="Ophthalmologist">Ophthalmologist</option>
-                          <option value="Gastroenterologist">Gastroenterologist</option>
-                          <option value="Oncologist">Oncologist</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Professional Email</label>
-                      <div className="relative flex items-center group">
-                        <Mail className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="email"
-                          required
-                          value={regEmail}
-                          onChange={(e) => setRegEmail(e.target.value)}
-                          placeholder="doctor@medconnect.com"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mobile Number & OTP (2-Col) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Mobile Number</label>
-                      <div className="relative flex items-center group">
-                        <Phone className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="tel"
-                          required
-                          value={regPhone}
-                          onChange={(e) => setRegPhone(e.target.value)}
-                          placeholder="+91 94481 22334"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem', paddingRight: '5.5rem' }}
-                        />
-                        <button
-                          type="button"
-                          disabled={resendTimer > 0 || isLoading}
-                          onClick={handleSendRegOtp}
-                          className="absolute right-1.5 px-2.5 py-1 text-white text-[11px] font-bold rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8] transition-all cursor-pointer"
-                        >
-                          {resendTimer > 0 ? `${resendTimer}s` : (otpSent ? 'Resend' : 'Send OTP')}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">4-Digit SMS OTP</label>
-                      <div className="relative flex items-center group">
-                        <Lock className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="text"
-                          maxLength={4}
-                          required
-                          value={regOtp}
-                          onChange={(e) => setRegOtp(e.target.value)}
-                          placeholder="Enter OTP"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F766E] text-center tracking-widest font-mono text-xs font-bold placeholder-[#94A3B8] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Passwords (2-Col) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Password</label>
-                      <div className="relative flex items-center">
-                        <input
-                          type={showRegPassword ? 'text' : 'password'}
-                          required
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingRight: '2.25rem' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowRegPassword(!showRegPassword)}
-                          className="absolute right-2.5 text-[#94A3B8] hover:text-[#0F172A] p-1 cursor-pointer"
-                        >
-                          {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Confirm Password</label>
-                      <div className="relative flex items-center">
-                        <input
-                          type={showRegConfirmPassword ? 'text' : 'password'}
-                          required
-                          value={regConfirmPassword}
-                          onChange={(e) => setRegConfirmPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingRight: '2.25rem' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
-                          className="absolute right-2.5 text-[#94A3B8] hover:text-[#0F172A] p-1 cursor-pointer"
-                        >
-                          {showRegConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Doctor Verification Notice */}
-                  <div className="p-3 bg-[#F0FDFA] rounded-xl border border-[#CCFBF1] text-[11px] text-[#0F766E] flex items-center gap-2 font-medium">
-                    <BadgeCheck className="w-4 h-4 text-[#0F766E] shrink-0" />
-                    <span>Your professional details may be verified before activation.</span>
-                  </div>
-
-                </div>
-              )}
-
-              {/* ------------------------------------------------------------ */}
-              {/* 3. HOSPITAL REGISTRATION FORM                                */}
-              {/* ------------------------------------------------------------ */}
-              {selectedRole === 'hospital' && (
-                <div className="space-y-4">
-                  
-                  {/* Hospital Info Section Header */}
-                  <div className="border-b border-[#E2E8F0] pb-1.5 flex items-center gap-2 text-xs font-extrabold text-[#0F172A]">
-                    <Building2 className="w-4 h-4 text-[#0F766E]" />
-                    <span>Hospital Organization Details</span>
-                  </div>
-
-                  {/* Hospital Name & Registration Number (2-Col) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Hospital Name</label>
-                      <div className="relative flex items-center group">
-                        <Building2 className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="text"
-                          required
-                          value={regHospitalName}
-                          onChange={(e) => setRegHospitalName(e.target.value)}
-                          placeholder="e.g. KMC Hospital Attavar"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">
-                        Hospital License / Reg. No.
-                      </label>
-                      <div className="relative flex items-center group">
-                        <FileCheck className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="text"
-                          required
-                          value={regHospitalLicense}
-                          onChange={(e) => setRegHospitalLicense(e.target.value)}
-                          placeholder="KA-HOSP-2024-912"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Official Email & Hospital Phone (2-Col) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Official Email Address</label>
-                      <div className="relative flex items-center group">
-                        <Mail className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="email"
-                          required
-                          value={regEmail}
-                          onChange={(e) => setRegEmail(e.target.value)}
-                          placeholder="admin@kmchospital.com"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Hospital Phone / Helpdesk</label>
-                      <div className="relative flex items-center group">
-                        <Phone className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="tel"
-                          required
-                          value={regHospitalPhone}
-                          onChange={(e) => setRegHospitalPhone(e.target.value)}
-                          placeholder="+91 824 244 5858"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hospital Address & City (2-Col) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-2">
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Hospital Address</label>
-                      <div className="relative flex items-center group">
-                        <MapPin className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="text"
-                          required
-                          value={regAddress}
-                          onChange={(e) => setRegAddress(e.target.value)}
-                          placeholder="Attavar & Light House Hill Rd"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">City / District</label>
-                      <input
-                        type="text"
-                        required
-                        value={regCity}
-                        onChange={(e) => setRegCity(e.target.value)}
-                        placeholder="Mangaluru"
-                        className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Admin Info Section Header */}
-                  <div className="border-b border-[#E2E8F0] pt-2 pb-1.5 flex items-center gap-2 text-xs font-extrabold text-[#0F172A]">
-                    <User className="w-4 h-4 text-[#2563EB]" />
-                    <span>Hospital Administrator Contact</span>
-                  </div>
-
-                  {/* Hospital Admin Name & Admin Mobile + OTP (2-Col) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Hospital Admin Name</label>
-                      <div className="relative flex items-center group">
-                        <User className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="text"
-                          required
-                          value={regName}
-                          onChange={(e) => setRegName(e.target.value)}
-                          placeholder="Dr. K. S. Rao (Medical Director)"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Admin Mobile Number</label>
-                      <div className="relative flex items-center group">
-                        <Phone className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="tel"
-                          required
-                          value={regPhone}
-                          onChange={(e) => setRegPhone(e.target.value)}
-                          placeholder="+91 82420 99887"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem', paddingRight: '5.5rem' }}
-                        />
-                        <button
-                          type="button"
-                          disabled={resendTimer > 0 || isLoading}
-                          onClick={handleSendRegOtp}
-                          className="absolute right-1.5 px-2.5 py-1 text-white text-[11px] font-bold rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-[#F1F5F9] disabled:text-[#94A3B8] transition-all cursor-pointer"
-                        >
-                          {resendTimer > 0 ? `${resendTimer}s` : (otpSent ? 'Resend' : 'Send OTP')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* OTP & Passwords */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">4-Digit SMS OTP</label>
-                      <div className="relative flex items-center group">
-                        <Lock className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors absolute left-3.5 pointer-events-none" />
-                        <input
-                          type="text"
-                          maxLength={4}
-                          required
-                          value={regOtp}
-                          onChange={(e) => setRegOtp(e.target.value)}
-                          placeholder="OTP"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F766E] text-center tracking-widest font-mono text-xs font-bold placeholder-[#94A3B8] rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingLeft: '2.5rem' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Password</label>
-                      <div className="relative flex items-center">
-                        <input
-                          type={showRegPassword ? 'text' : 'password'}
-                          required
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingRight: '2.25rem' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowRegPassword(!showRegPassword)}
-                          className="absolute right-2 text-[#94A3B8] hover:text-[#0F172A] p-1 cursor-pointer"
-                        >
-                          {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#0F172A] mb-1.5 block">Confirm Password</label>
-                      <div className="relative flex items-center">
-                        <input
-                          type={showRegConfirmPassword ? 'text' : 'password'}
-                          required
-                          value={regConfirmPassword}
-                          onChange={(e) => setRegConfirmPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 transition-all"
-                          style={{ paddingRight: '2.25rem' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
-                          className="absolute right-2 text-[#94A3B8] hover:text-[#0F172A] p-1 cursor-pointer"
-                        >
-                          {showRegConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hospital Verification Notice */}
-                  <div className="p-3 bg-[#F0FDFA] rounded-xl border border-[#CCFBF1] text-[11px] text-[#0F766E] flex items-center gap-2 font-medium">
-                    <BadgeCheck className="w-4 h-4 text-[#0F766E] shrink-0" />
-                    <span>Hospital accounts require verification before activation.</span>
-                  </div>
-
-                </div>
-              )}
-
-              {/* Dynamic Submit Button */}
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -1074,15 +711,7 @@ export const AuthPages = () => {
                 {isLoading ? (
                   <span>Processing Registration...</span>
                 ) : (
-                  <>
-                    <span>
-                      {selectedRole === 'patient'
-                        ? 'Create Account →'
-                        : selectedRole === 'doctor'
-                        ? 'Register as Doctor →'
-                        : 'Register Hospital →'}
-                    </span>
-                  </>
+                  <span>Create Patient Account →</span>
                 )}
               </button>
 

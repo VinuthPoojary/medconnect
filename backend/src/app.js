@@ -4,6 +4,7 @@ import cors from 'cors';
 import healthRoutes from './routes/health.js';
 import authRoutes from './routes/auth.js';
 import authDoctorRoutes from './routes/authDoctor.js';
+import authHospitalRoutes from './routes/authHospital.js';
 import doctorRoutes from './routes/doctors.js';
 import hospitalRoutes from './routes/hospitals.js';
 import appointmentRoutes from './routes/appointments.js';
@@ -21,6 +22,8 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/health', healthRoutes);
+app.use('/api/hospital/auth', authHospitalRoutes);
+app.use('/api/auth/hospital', authHospitalRoutes);
 app.use('/api/auth/doctor', authDoctorRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/doctors', doctorRoutes);

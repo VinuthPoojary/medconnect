@@ -24,6 +24,21 @@ export const register = async (req, res) => {
       city,
     } = req.body;
 
+    // Strict Role Policy: Public registration is strictly limited to PATIENT role.
+    const requestedRole = (role || 'patient').toLowerCase();
+    if (requestedRole === 'doctor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Doctor self-registration is disabled. Doctor accounts are created and managed exclusively by authorized Hospital Administrators.',
+      });
+    }
+    if (requestedRole === 'hospital' || requestedRole === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Organization and administrative accounts cannot be registered publicly. Please contact MedConnect administration.',
+      });
+    }
+
     if (!name || !email || !phone || !password) {
       return res.status(400).json({ success: false, message: 'Missing required registration fields.' });
     }
@@ -54,9 +69,9 @@ export const register = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     const userId = `user-${Date.now()}`;
-    const userRole = role || 'patient';
+    const userRole = 'patient';
     const userAbha = abhaId || `91-${Math.floor(Math.random() * 8999 + 1000)}-${Math.floor(Math.random() * 8999 + 1000)}`;
-    const avatar = (name || 'MC').split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
+    const avatar = (name || 'PA').split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
 
     const effectiveHospitalName = hospitalName || (userRole === 'hospital' ? name : null);
 
@@ -185,7 +200,31 @@ export const login = async (req, res) => {
       [identifier, cleanPhone]
     );
 
-    if (result.rows.length === 0) {
+    let user = result.rows[0];
+
+    // If not found in users and hospital role requested, look in hospitals table
+    if (!user && (role || '').toLowerCase() === 'hospital') {
+      const hospRes = await query(
+        'SELECT * FROM hospitals WHERE LOWER(email) = LOWER($1) OR phone = $1 OR id = $1 LIMIT 1',
+        [identifier]
+      );
+      if (hospRes.rows.length > 0) {
+        const hosp = hospRes.rows[0];
+        user = {
+          id: `user-${hosp.id}`,
+          name: hosp.name,
+          email: hosp.email,
+          phone: hosp.phone,
+          role: 'hospital',
+          hospital_id: hosp.id,
+          hospital_name: hosp.name,
+          password_hash: hosp.password_hash,
+          login_enabled: hosp.login_enabled
+        };
+      }
+    }
+
+    if (!user) {
       const requestedRole = (role || 'patient').toLowerCase();
       // Only auto-register patient on first phone login if patient was requested
       if (requestedRole === 'patient' && cleanPhone.length >= 10) {
@@ -202,10 +241,10 @@ export const login = async (req, res) => {
           RETURNING id, name, email, phone, role, abha_id as "abhaId", avatar, hospital_id, hospital_name, specialization, qualification, experience, license_number
         `;
         const newRes = await query(insertSql, [userId, userName, userEmail, identifier, passwordHash, userAbha]);
-        const user = newRes.rows[0];
+        const newUser = newRes.rows[0];
 
         const token = jwt.sign(
-          { id: user.id, email: user.email, role: 'patient', name: user.name },
+          { id: newUser.id, email: newUser.email, role: 'patient', name: newUser.name },
           JWT_SECRET,
           { expiresIn: '7d' }
         );
@@ -213,7 +252,7 @@ export const login = async (req, res) => {
         return res.json({
           success: true,
           message: 'Sign in successful',
-          user: { ...user, token, lastLogin: 'Just now' },
+          user: { ...newUser, token, lastLogin: 'Just now' },
         });
       }
 
@@ -221,7 +260,13 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, message: `Invalid credentials. ${roleLabel} account not found.` });
     }
 
-    const user = result.rows[0];
+    // Check account enabled status
+    if (user.login_enabled !== undefined && user.login_enabled !== null && Number(user.login_enabled) === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is currently disabled. Please contact MedConnect administration.'
+      });
+    }
 
     // 1. Password verification with bcrypt
     const isMatch = await bcrypt.compare(password, user.password_hash);
@@ -256,6 +301,21 @@ export const login = async (req, res) => {
       }
     }
 
+    // Resolve Hospital details if role is hospital
+    let resolvedHospitalId = user.hospital_id || (user.id ? user.id.replace('user-', '') : null);
+    let resolvedHospitalName = user.hospital_name || null;
+    if (actualDbRole === 'hospital') {
+      if (!resolvedHospitalId || resolvedHospitalId === 'hospital') resolvedHospitalId = 'hosp-1';
+      if (!resolvedHospitalName && resolvedHospitalId) {
+        try {
+          const hospRes = await query('SELECT name FROM hospitals WHERE id = $1', [resolvedHospitalId]);
+          if (hospRes.rows.length > 0) {
+            resolvedHospitalName = hospRes.rows[0].name;
+          }
+        } catch (e) {}
+      }
+    }
+
     // 4. Generate JWT
     const token = jwt.sign(
       {
@@ -263,7 +323,7 @@ export const login = async (req, res) => {
         doctorId: doctorDetails?.id,
         email: user.email,
         role: actualDbRole,
-        hospitalId: user.hospital_id || null,
+        hospitalId: resolvedHospitalId,
         name: user.name,
       },
       JWT_SECRET,
@@ -277,8 +337,8 @@ export const login = async (req, res) => {
       email: user.email,
       phone: user.phone,
       role: actualDbRole,
-      hospitalId: user.hospital_id || null,
-      hospitalName: user.hospital_name || doctorDetails?.hospital,
+      hospitalId: resolvedHospitalId,
+      hospitalName: resolvedHospitalName || user.hospital_name || doctorDetails?.hospital,
       specialization: user.specialization || doctorDetails?.specialization,
       qualification: user.qualification,
       experience: user.experience,

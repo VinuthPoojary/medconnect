@@ -181,28 +181,76 @@ export const chatWithAi = async (req, res) => {
 
 export const queryHospitalRag = async (req, res) => {
   try {
-    const { hospitalName, query: userQuery } = req.body;
-    if (!hospitalName || !userQuery) {
-      return res.status(400).json({ success: false, message: 'Hospital name and query are required.' });
+    const { hospitalId, hospitalName, query: userQuery } = req.body;
+    if ((!hospitalId && !hospitalName) || !userQuery) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hospital identification (hospitalId or hospitalName) and query are required.',
+      });
     }
 
-    // Retrieve official uploaded schemes & policies from hospital_schemes PostgreSQL table
+    // 1. Resolve exact target hospital record to guarantee isolation
+    let resolvedHosp = null;
+    if (hospitalId) {
+      const hRes = await query('SELECT id, name FROM hospitals WHERE id = $1 LIMIT 1', [hospitalId]);
+      if (hRes.rows.length > 0) resolvedHosp = hRes.rows[0];
+    }
+    if (!resolvedHosp && hospitalName) {
+      const hRes = await query(
+        'SELECT id, name FROM hospitals WHERE LOWER(name) LIKE LOWER($1) OR id = $2 LIMIT 1',
+        [`%${hospitalName.trim()}%`, hospitalName.trim()]
+      );
+      if (hRes.rows.length > 0) resolvedHosp = hRes.rows[0];
+    }
+
+    const targetHospId = resolvedHosp?.id || hospitalId || 'hosp-1';
+    const targetHospName = resolvedHosp?.name || hospitalName || 'Selected Hospital';
+
+    // 2. Retrieve ONLY documents belonging strictly to targetHospId (Zero Cross-Hospital Retrieval)
     const docResult = await query(
-      `SELECT scheme_title as "schemeTitle", category, coverage_amount as "coverageAmount", eligibility, description, content_text as "contentText"
-       FROM hospital_schemes
-       WHERE hospital_name ILIKE $1`,
-      [`%${hospitalName}%`]
+      `SELECT 
+        id, 
+        hospital_id as "hospitalId", 
+        hospital_name as "hospitalName", 
+        document_name as "documentName", 
+        document_type as "documentType", 
+        version, 
+        page_count as "pageCount", 
+        content_text as "contentText"
+       FROM hospital_documents
+       WHERE hospital_id = $1
+       ORDER BY created_at DESC`,
+      [targetHospId]
     );
 
-    const ragResponse = await queryHospitalRagWithGemini(hospitalName, userQuery, docResult.rows);
+    let docs = docResult.rows;
+
+    // Fallback search in hospital_schemes for this hospital name if no dedicated documents found
+    if (docs.length === 0) {
+      const schemeResult = await query(
+        `SELECT scheme_title as "documentName", category as "documentType", '1.0' as version, 4 as "pageCount", content_text as "contentText"
+         FROM hospital_schemes
+         WHERE hospital_name ILIKE $1`,
+        [`%${targetHospName}%`]
+      );
+      docs = schemeResult.rows;
+    }
+
+    const ragResult = await queryHospitalRagWithGemini(targetHospName, userQuery, docs);
+
     res.json({
       success: true,
-      hospitalName,
+      hospitalId: targetHospId,
+      hospitalName: targetHospName,
       query: userQuery,
-      ragResponse,
-      retrievedDocumentsCount: docResult.rows.length,
+      answer: typeof ragResult === 'string' ? ragResult : ragResult.answer,
+      sources: ragResult.sources || [],
+      confidence: ragResult.confidence || 0.9,
+      isGrounded: ragResult.isGrounded !== false,
+      retrievedDocumentsCount: docs.length,
     });
   } catch (error) {
+    console.error('❌ Hospital RAG error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

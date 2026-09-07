@@ -21,6 +21,8 @@ import {
   approveHospitalApi,
   loginApi,
   loginDoctorApi,
+  loginHospitalApi,
+  fetchHospitalProfileApi,
   sendOtpApi,
   otpLoginApi,
   registerApi,
@@ -98,9 +100,33 @@ export const AppProvider = ({ children }) => {
   });
 
   const [dbConnected, setDbConnected] = useState(false);
-  const [activeView, setActiveView] = useState(() => currentUser ? (currentUser.role === 'patient' ? 'dashboard' : currentUser.role === 'hospital' ? 'hospital-overview' : currentUser.role === 'admin' ? 'admin-overview' : 'hospital-appointments') : 'landing');
+  const [activeView, setActiveView] = useState(() => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (path === '/hospital/login' || path === '/hospital-login') return 'hospital-login';
+    if (path === '/hospital/dashboard' || path === '/hospital-dashboard') return 'hospital-dashboard';
+    if (path === '/doctor/login' || path === '/doctor-login') return 'doctor-login';
+    if (currentUser) {
+      if (currentUser.role === 'patient') return 'dashboard';
+      if (currentUser.role === 'hospital') return 'hospital-dashboard';
+      if (currentUser.role === 'doctor') return 'doctor-overview';
+      if (currentUser.role === 'admin') return 'admin-overview';
+    }
+    return 'landing';
+  });
   const [doctors, setDoctors] = useState(MOCK_DOCTORS);
   const [hospitals, setHospitals] = useState(MOCK_HOSPITALS);
+
+  // Sync browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/hospital/login') setActiveView('hospital-login');
+      else if (path === '/hospital/dashboard') setActiveView('hospital-dashboard');
+      else if (path === '/doctor/login') setActiveView('doctor-login');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   // Isolate user personal data: database is the single source of truth
   const [appointments, setAppointments] = useState([]);
@@ -185,7 +211,8 @@ export const AppProvider = ({ children }) => {
     if (newRole === 'patient') {
       setActiveView('dashboard');
     } else if (newRole === 'hospital') {
-      setActiveView('hospital-overview');
+      setActiveView('hospital-dashboard');
+      try { window.history.pushState({}, '', '/hospital/dashboard'); } catch (e) {}
     } else if (newRole === 'admin') {
       setActiveView('admin-overview');
     } else if (newRole === 'doctor') {
@@ -200,6 +227,8 @@ export const AppProvider = ({ children }) => {
       let res;
       if (roleInput === 'doctor') {
         res = await loginDoctorApi(phoneOrEmailInput, passInput);
+      } else if (roleInput === 'hospital') {
+        res = await loginHospitalApi(phoneOrEmailInput, passInput);
       } else {
         res = await loginApi(phoneOrEmailInput, passInput, roleInput);
       }
@@ -217,6 +246,12 @@ export const AppProvider = ({ children }) => {
             localStorage.setItem('medconnect_token', authenticatedUser.token);
           }
         } catch (e) {}
+
+        if (authenticatedUser.role === 'hospital') {
+          try {
+            window.history.pushState({}, '', '/hospital/dashboard');
+          } catch (e) {}
+        }
 
         // Fetch real database appointments immediately upon login
         try {
@@ -409,10 +444,10 @@ export const AppProvider = ({ children }) => {
 
 
   const logout = () => {
+    const prevRole = currentUser?.role;
     setCurrentUser(null);
     setIsAuthenticated(false);
     setRoleState('guest');
-    setActiveView('login');
     localStorage.removeItem('medconnect_auth_user');
     localStorage.removeItem('medconnect_token');
     localStorage.removeItem('medconnect_user');
@@ -420,6 +455,33 @@ export const AppProvider = ({ children }) => {
     setReports([]);
     setMedicines([]);
     setNotifications([]);
+
+    if (prevRole === 'hospital') {
+      setActiveView('hospital-login');
+      try { window.history.pushState({}, '', '/hospital/login'); } catch (e) {}
+    } else if (prevRole === 'doctor') {
+      setActiveView('doctor-login');
+      try { window.history.pushState({}, '', '/doctor/login'); } catch (e) {}
+    } else {
+      setActiveView('login');
+    }
+  };
+
+  const hospitalLogout = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setRoleState('guest');
+    setActiveView('hospital-login');
+    localStorage.removeItem('medconnect_auth_user');
+    localStorage.removeItem('medconnect_token');
+    localStorage.removeItem('medconnect_user');
+    setAppointments([]);
+    setReports([]);
+    setMedicines([]);
+    setNotifications([]);
+    try {
+      window.history.pushState({}, '', '/hospital/login');
+    } catch (e) {}
   };
 
   const bookAppointment = async (doctorId, date, timeSlot, type) => {
@@ -587,6 +649,7 @@ export const AppProvider = ({ children }) => {
         loginWithAbha,
         quickDemoLogin,
         logout,
+        hospitalLogout,
         registerUser,
         doctors,
         hospitals,

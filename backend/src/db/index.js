@@ -1720,6 +1720,65 @@ const SEED_NOTIFICATIONS = [
   },
 ];
 
+// Seed Hospital Schemes for RAG
+const SEED_SCHEMES = [
+  {
+    id: 'sch-kmc-1',
+    hospital_name: 'KMC Hospital Attavar & Jyothi',
+    scheme_title: 'Ayushman Bharat PM-JAY (100% Cashless)',
+    category: 'Government Scheme',
+    coverage_amount: 'Up to ₹5,00,000 / Family per Year',
+    eligibility: 'BPL Card Holders, Ration Card Holders & ABHA ID Verified',
+    description: 'Provides 100% cashless hospitalization for empanelled cardiac, neurological, surgical, and ICU treatments at KMC Hospital.',
+    document_url: 'https://medconnect.karavali.ai/docs/kmc-ayushman-bharat-guidelines.pdf',
+    content_text: 'KMC Hospital Attavar & Jyothi provides 100% cashless treatment under Ayushman Bharat PM-JAY and Arogya Karnataka. Beneficiaries with BPL card or Ayushman Card receive covered surgical packages, ICU stays, and medicines without upfront payment. Emergency admissions are approved within 2 hours.'
+  },
+  {
+    id: 'sch-kmc-2',
+    hospital_name: 'KMC Hospital Attavar & Jyothi',
+    scheme_title: 'Star Health & HDFC Ergo Cashless Policy',
+    category: 'Private Insurance',
+    coverage_amount: 'Full Sum Insured (Up to Policy Limit)',
+    eligibility: 'All Active Star Health & HDFC Ergo Policyholders',
+    description: 'Instant desk approval within 30 minutes for all planned and emergency surgical hospitalizations.',
+    document_url: 'https://medconnect.karavali.ai/docs/kmc-star-health-cashless.pdf',
+    content_text: 'KMC Hospital is a network hospital for Star Health, HDFC Ergo, Niva Bupa, and ICICI Lombard. Pre-authorization is processed at Room #102 Insurance Desk. 0% co-payment for network claims.'
+  },
+  {
+    id: 'sch-aj-1',
+    hospital_name: 'AJ Hospital & Research Centre',
+    scheme_title: 'Arogya Karnataka & Yashasvini Scheme',
+    category: 'Government Scheme',
+    coverage_amount: 'Up to ₹5,00,000 for Super Specialty',
+    eligibility: 'Farmers, Co-operative Society Members & BPL Families',
+    description: 'Complete coverage for cardiology, oncology, urology, and organ transplant procedures at AJ Hospital.',
+    document_url: 'https://medconnect.karavali.ai/docs/aj-arogya-karnataka.pdf',
+    content_text: 'AJ Hospital & Research Centre is empanelled under Yashasvini and Arogya Karnataka. Farmers with Yashasvini card receive 100% covered surgeries in Cardiac Surgery, Dialysis, Radiation Oncology, and Urology.'
+  },
+  {
+    id: 'sch-fm-1',
+    hospital_name: 'Father Muller Medical College Hospital',
+    scheme_title: 'Father Muller Charitable Healthcare Subsidy',
+    category: 'Hospital Policy',
+    coverage_amount: '50% to 100% Fee Waiver on OPD & Diagnostics',
+    eligibility: 'Economically Weaker Sections (EWS) & Senior Citizens',
+    description: 'Special concession on OPD consultations, lab tests, MRI/CT scans, and inpatient bed charges.',
+    document_url: 'https://medconnect.karavali.ai/docs/father-muller-charity-policy.pdf',
+    content_text: 'Father Muller Hospital provides subsidized healthcare for senior citizens and low-income families. OPD registration fee is concessional at ₹150, with up to 50% discount on laboratory blood tests, X-ray, and MRI imaging.'
+  },
+  {
+    id: 'sch-kh-1',
+    hospital_name: 'Kasturba Hospital, Manipal',
+    scheme_title: 'Manipal Health Card Scheme',
+    category: 'Hospital Policy',
+    coverage_amount: '50% OPD Concession & 25% IPD Discount',
+    eligibility: 'Coastal Karnataka Residents (Udupi, Mangaluru, Uttara Kannada)',
+    description: 'Exclusive discount card providing massive savings on OPD consultation, diagnostic investigations, and medicines across Manipal group hospitals.',
+    document_url: 'https://medconnect.karavali.ai/docs/manipal-health-card-benefits.pdf',
+    content_text: 'Manipal Health Card offers 50% discount on doctor consultation fees, 25% discount on MRI/CT scans and laboratory tests, and 10% discount on pharmacy medicines at Kasturba Hospital Manipal.'
+  }
+];
+
 async function initDb() {
   if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('your-password')) {
     try {
@@ -1778,6 +1837,12 @@ async function initPgSchema() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS qualification VARCHAR(255);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS experience VARCHAR(50);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS license_number VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS login_enabled BOOLEAN DEFAULT TRUE;
+
+    ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+    ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+    ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+    ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS login_enabled BOOLEAN DEFAULT TRUE;
 
 
     CREATE TABLE IF NOT EXISTS doctors (
@@ -2021,66 +2086,9 @@ async function initPgSchema() {
     );
   }
 
-  // Seed Hospital Schemes for RAG
-  const seedSchemes = [
-    {
-      id: 'sch-kmc-1',
-      hospital_name: 'KMC Hospital Attavar & Jyothi',
-      scheme_title: 'Ayushman Bharat PM-JAY (100% Cashless)',
-      category: 'Government Scheme',
-      coverage_amount: 'Up to ₹5,00,000 / Family per Year',
-      eligibility: 'BPL Card Holders, Ration Card Holders & ABHA ID Verified',
-      description: 'Provides 100% cashless hospitalization for empanelled cardiac, neurological, surgical, and ICU treatments at KMC Hospital.',
-      document_url: 'https://medconnect.karavali.ai/docs/kmc-ayushman-bharat-guidelines.pdf',
-      content_text: 'KMC Hospital Attavar & Jyothi provides 100% cashless treatment under Ayushman Bharat PM-JAY and Arogya Karnataka. Beneficiaries with BPL card or Ayushman Card receive covered surgical packages, ICU stays, and medicines without upfront payment. Emergency admissions are approved within 2 hours.'
-    },
-    {
-      id: 'sch-kmc-2',
-      hospital_name: 'KMC Hospital Attavar & Jyothi',
-      scheme_title: 'Star Health & HDFC Ergo Cashless Policy',
-      category: 'Private Insurance',
-      coverage_amount: 'Full Sum Insured (Up to Policy Limit)',
-      eligibility: 'All Active Star Health & HDFC Ergo Policyholders',
-      description: 'Instant desk approval within 30 minutes for all planned and emergency surgical hospitalizations.',
-      document_url: 'https://medconnect.karavali.ai/docs/kmc-star-health-cashless.pdf',
-      content_text: 'KMC Hospital is a network hospital for Star Health, HDFC Ergo, Niva Bupa, and ICICI Lombard. Pre-authorization is processed at Room #102 Insurance Desk. 0% co-payment for network claims.'
-    },
-    {
-      id: 'sch-aj-1',
-      hospital_name: 'AJ Hospital & Research Centre',
-      scheme_title: 'Arogya Karnataka & Yashasvini Scheme',
-      category: 'Government Scheme',
-      coverage_amount: 'Up to ₹5,00,000 for Super Specialty',
-      eligibility: 'Farmers, Co-operative Society Members & BPL Families',
-      description: 'Complete coverage for cardiology, oncology, urology, and organ transplant procedures at AJ Hospital.',
-      document_url: 'https://medconnect.karavali.ai/docs/aj-arogya-karnataka.pdf',
-      content_text: 'AJ Hospital & Research Centre is empanelled under Yashasvini and Arogya Karnataka. Farmers with Yashasvini card receive 100% covered surgeries in Cardiac Surgery, Dialysis, Radiation Oncology, and Urology.'
-    },
-    {
-      id: 'sch-fm-1',
-      hospital_name: 'Father Muller Medical College Hospital',
-      scheme_title: 'Father Muller Charitable Healthcare Subsidy',
-      category: 'Hospital Policy',
-      coverage_amount: '50% to 100% Fee Waiver on OPD & Diagnostics',
-      eligibility: 'Economically Weaker Sections (EWS) & Senior Citizens',
-      description: 'Special concession on OPD consultations, lab tests, MRI/CT scans, and inpatient bed charges.',
-      document_url: 'https://medconnect.karavali.ai/docs/father-muller-charity-policy.pdf',
-      content_text: 'Father Muller Hospital provides subsidized healthcare for senior citizens and low-income families. OPD registration fee is concessional at ₹150, with up to 50% discount on laboratory blood tests, X-ray, and MRI imaging.'
-    },
-    {
-      id: 'sch-kh-1',
-      hospital_name: 'Kasturba Hospital, Manipal',
-      scheme_title: 'Manipal Health Card Scheme',
-      category: 'Hospital Policy',
-      coverage_amount: '50% OPD Concession & 25% IPD Discount',
-      eligibility: 'Coastal Karnataka Residents (Udupi, Mangaluru, Uttara Kannada)',
-      description: 'Exclusive discount card providing massive savings on OPD consultation, diagnostic investigations, and medicines across Manipal group hospitals.',
-      document_url: 'https://medconnect.karavali.ai/docs/manipal-health-card-benefits.pdf',
-      content_text: 'Manipal Health Card offers 50% discount on doctor consultation fees, 25% discount on MRI/CT scans and laboratory tests, and 10% discount on pharmacy medicines at Kasturba Hospital Manipal.'
-    }
-  ];
 
-  for (const s of seedSchemes) {
+
+  for (const s of SEED_SCHEMES) {
     await pgPool.query(
       `INSERT INTO hospital_schemes (id, hospital_name, scheme_title, category, coverage_amount, eligibility, description, document_url, content_text)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -2101,8 +2109,12 @@ async function initSqliteSchema() {
       role TEXT NOT NULL DEFAULT 'patient',
       abha_id TEXT,
       avatar TEXT,
+      hospital_id TEXT,
       hospital_name TEXT,
       specialization TEXT,
+      qualification TEXT,
+      experience TEXT,
+      license_number TEXT,
       mfa_enabled INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -2111,14 +2123,20 @@ async function initSqliteSchema() {
       id TEXT PRIMARY KEY,
       user_id TEXT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      password_hash TEXT,
       photo TEXT,
       specialization TEXT NOT NULL,
       experience TEXT,
+      qualification TEXT,
+      license_number TEXT,
+      hospital_id TEXT,
+      hospital_name TEXT,
       rating REAL DEFAULT 4.8,
       reviews_count INTEGER DEFAULT 50,
       languages TEXT,
       available_slots TEXT,
-      hospital_name TEXT,
       location TEXT,
       distance TEXT,
       consultation_fee INTEGER DEFAULT 500,
@@ -2131,6 +2149,9 @@ async function initSqliteSchema() {
     CREATE TABLE IF NOT EXISTS hospitals (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      password_hash TEXT,
       banner TEXT,
       location TEXT NOT NULL,
       distance TEXT,
@@ -2140,7 +2161,6 @@ async function initSqliteSchema() {
       beds_available INTEGER DEFAULT 25,
       emergency_status TEXT DEFAULT 'Available',
       facilities TEXT,
-      phone TEXT,
       reviews_count INTEGER DEFAULT 300,
       approved INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -2224,14 +2244,77 @@ async function initSqliteSchema() {
       recommended_specialist TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS hospital_schemes (
+      id TEXT PRIMARY KEY,
+      hospital_name TEXT NOT NULL,
+      scheme_title TEXT NOT NULL,
+      category TEXT DEFAULT 'Government Scheme',
+      coverage_amount TEXT,
+      eligibility TEXT,
+      description TEXT,
+      document_url TEXT,
+      content_text TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS hospital_documents (
+      id TEXT PRIMARY KEY,
+      hospital_id TEXT NOT NULL,
+      hospital_name TEXT NOT NULL,
+      document_name TEXT NOT NULL,
+      document_type TEXT NOT NULL,
+      version TEXT DEFAULT '1.0',
+      file_url TEXT,
+      file_path TEXT,
+      file_size INTEGER,
+      status TEXT DEFAULT 'Indexed',
+      uploaded_by TEXT DEFAULT 'Hospital Administration',
+      page_count INTEGER DEFAULT 1,
+      content_text TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_hosp_docs_hosp_id ON hospital_documents (hospital_id, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS prescriptions (
+      id TEXT PRIMARY KEY,
+      doctor_id TEXT NOT NULL,
+      doctor_name TEXT NOT NULL,
+      patient_id TEXT NOT NULL,
+      patient_name TEXT NOT NULL,
+      medications TEXT NOT NULL,
+      instructions TEXT,
+      date TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
-  try {
-    await sqliteDb.exec(`ALTER TABLE doctors ADD COLUMN user_id TEXT REFERENCES users(id)`);
-  } catch (e) {}
-  try {
-    await sqliteDb.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_doctors_user_id ON doctors(user_id)`);
-  } catch (e) {}
+  // User column migrations
+  try { await sqliteDb.exec(`ALTER TABLE users ADD COLUMN hospital_id TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE users ADD COLUMN hospital_name TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE users ADD COLUMN specialization TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE users ADD COLUMN qualification TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE users ADD COLUMN experience TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE users ADD COLUMN license_number TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE users ADD COLUMN mfa_enabled INTEGER DEFAULT 1`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE users ADD COLUMN login_enabled INTEGER DEFAULT 1`); } catch (e) {}
+
+  // Hospital column migrations
+  try { await sqliteDb.exec(`ALTER TABLE hospitals ADD COLUMN email TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE hospitals ADD COLUMN phone TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE hospitals ADD COLUMN password_hash TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE hospitals ADD COLUMN login_enabled INTEGER DEFAULT 1`); } catch (e) {}
+
+  // Doctor column migrations
+  try { await sqliteDb.exec(`ALTER TABLE doctors ADD COLUMN user_id TEXT REFERENCES users(id)`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE doctors ADD COLUMN email TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE doctors ADD COLUMN phone TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE doctors ADD COLUMN password_hash TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE doctors ADD COLUMN qualification TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE doctors ADD COLUMN license_number TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`ALTER TABLE doctors ADD COLUMN hospital_id TEXT`); } catch (e) {}
+  try { await sqliteDb.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_doctors_user_id ON doctors(user_id)`); } catch (e) {}
 
   // Medical reports column migrations
   try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN patient_id TEXT REFERENCES users(id)`); } catch (e) {}
@@ -2246,7 +2329,6 @@ async function initSqliteSchema() {
   try { await sqliteDb.exec(`ALTER TABLE medical_reports ADD COLUMN specialist_reason TEXT`); } catch (e) {}
 
   // Seed Users safely with INSERT OR IGNORE to preserve registered users
-
   for (const u of SEED_USERS) {
     await sqliteDb.run(
       `INSERT OR REPLACE INTO users (id, name, email, phone, password_hash, role, abha_id, avatar, hospital_name, specialization)
@@ -2257,7 +2339,7 @@ async function initSqliteSchema() {
 
   for (const h of SEED_HOSPITALS) {
     await sqliteDb.run(
-      `INSERT OR REPLACE INTO hospitals (id, name, banner, location, distance, rating, departments, doctors_count, beds_available, emergency_status, facilities, phone, reviews_count, approved)
+      `INSERT OR IGNORE INTO hospitals (id, name, banner, location, distance, rating, departments, doctors_count, beds_available, emergency_status, facilities, phone, reviews_count, approved)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [h.id, h.name, h.banner, h.location, h.distance, h.rating, h.departments, h.doctors_count, h.beds_available, h.emergency_status, h.facilities, h.phone, h.reviews_count, h.approved ? 1 : 0]
     );
@@ -2303,6 +2385,202 @@ async function initSqliteSchema() {
       `INSERT OR IGNORE INTO notifications (id, user_id, title, message, category, timestamp, read)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [n.id, n.user_id, n.title, n.message, n.category, n.timestamp, n.read ? 1 : 0]
+    );
+  }
+
+  for (const s of SEED_SCHEMES) {
+    await sqliteDb.run(
+      `INSERT OR IGNORE INTO hospital_schemes (id, hospital_name, scheme_title, category, coverage_amount, eligibility, description, document_url, content_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [s.id, s.hospital_name, s.scheme_title, s.category, s.coverage_amount, s.eligibility, s.description, s.document_url, s.content_text]
+    );
+  }
+
+  const SEED_HOSPITAL_DOCUMENTS = [
+    {
+      id: 'doc-kmc-1',
+      hospital_id: 'hosp-1',
+      hospital_name: 'KMC Hospital Attavar & Jyothi',
+      document_name: 'Ayushman Bharat PM-JAY Implementation Guidelines.pdf',
+      document_type: 'Ayushman Bharat / Govt Scheme',
+      version: '2.1',
+      file_url: 'https://medconnect.karavali.ai/docs/kmc/ayushman-bharat-guidelines-v2.pdf',
+      file_size: 2457600,
+      status: 'Indexed',
+      uploaded_by: 'Medical Superintendent - KMC Hospital',
+      page_count: 8,
+      content_text: `KMC Hospital Attavar & Jyothi, Mangaluru - Official Ayushman Bharat PM-JAY Policy.
+Pages 1-3: General Scope & Empanelment. KMC Hospital is a designated tertiary center under PM-JAY & Arogya Karnataka. 100% cashless hospitalization is extended for all empanelled secondary and tertiary surgical/medical packages up to ₹5,00,000 per family annually.
+Pages 4-5: Eligibility & Required Documentation. Patients must produce a valid Aadhaar Card, active BPL Ration Card / NFSA Card, and ABHA ID. Pre-authorization is processed at the dedicated Ayushman Mitra counter at Ground Floor OPD within 2 hours of admission.
+Pages 6-8: Covered Specialties & Inclusions. Full coverage for Cardiology (angiography, stenting, valve replacement), Neurology (stroke thrombolysis, neurotrauma), Oncology (chemotherapy and radiation therapy), and Orthopedic trauma surgeries. Diagnostics, medications, ICU charges, and 15 days of post-discharge medicines are strictly included with zero out-of-pocket charges.`
+    },
+    {
+      id: 'doc-kmc-2',
+      hospital_id: 'hosp-1',
+      hospital_name: 'KMC Hospital Attavar & Jyothi',
+      document_name: 'Cashless Health Insurance & TPA Empanelled Providers.pdf',
+      document_type: 'Insurance Guidelines',
+      version: '1.4',
+      file_url: 'https://medconnect.karavali.ai/docs/kmc/cashless-insurance-tpa.pdf',
+      file_size: 1843200,
+      status: 'Indexed',
+      uploaded_by: 'TPA Desk Lead - KMC Hospital',
+      page_count: 5,
+      content_text: `KMC Hospital Attavar & Jyothi - Third Party Administrator (TPA) & Private Health Insurance Policy.
+Pages 1-2: Empanelled Insurance Partners. 100% Cashless hospitalization is supported for Star Health, HDFC ERGO, ICICI Lombard, Care Health, Niva Bupa, Bajaj Allianz, and Medi Assist TPA.
+Pages 3-5: Planned Admission & Emergency Cashless Protocols. For planned admissions, submit insurance card and government ID 48 hours in advance for initial pre-authorization approval. Emergency admissions receive provisional pre-auth clearance within 4 hours. Room rent caps and co-pay clauses apply as per individual patient policy terms.`
+    },
+    {
+      id: 'doc-kmc-3',
+      hospital_id: 'hosp-1',
+      hospital_name: 'KMC Hospital Attavar & Jyothi',
+      document_name: 'OPD Consultation & Diagnostic Service Charter.pdf',
+      document_type: 'Hospital Policy',
+      version: '3.0',
+      file_url: 'https://medconnect.karavali.ai/docs/kmc/opd-service-charter.pdf',
+      file_size: 1433600,
+      status: 'Indexed',
+      uploaded_by: 'Chief Operating Officer - KMC Hospital',
+      page_count: 4,
+      content_text: `KMC Hospital Attavar & Jyothi - Citizen & Patient Service Charter.
+Pages 1-2: OPD Timings and Registration. General OPD functions Monday through Saturday from 08:30 AM to 05:00 PM. Super-specialty evening clinics operate from 04:30 PM to 07:30 PM. Standard OPD registration fee is ₹250 (valid for 15 days of follow-up visits).
+Pages 3-4: 24x7 Emergency & Trauma Care. Emergency department, CT scan, digital X-Ray, 24x7 blood bank, and level-3 ICU operate continuously. Ambulance dispatch helpline: +91 824 244 5858.`
+    },
+    {
+      id: 'doc-aj-1',
+      hospital_id: 'hosp-2',
+      hospital_name: 'AJ Hospital & Research Centre',
+      document_name: 'Arogya Karnataka & BPL Card Benefits Protocol.pdf',
+      document_type: 'Ayushman Bharat / Govt Scheme',
+      version: '2.0',
+      file_url: 'https://medconnect.karavali.ai/docs/aj/arogya-karnataka-bpl-benefits.pdf',
+      file_size: 2150400,
+      status: 'Indexed',
+      uploaded_by: 'Govt Schemes Coordinator - AJ Hospital',
+      page_count: 6,
+      content_text: `AJ Hospital & Research Centre, Kuntikana, Mangaluru - Government Health Scheme Guidelines.
+Pages 1-3: Scheme Overview. Comprehensive cashless inpatient care for Ayushman Bharat - Arogya Karnataka (AB-ArK) eligible cardholders. Secondary complex care up to ₹1,50,000 and tertiary super-specialty procedures up to ₹5,00,000 per eligible family per year.
+Pages 4-6: Referral Rules & Documentation. Referral letter from Taluk/District Wenlock Hospital is mandatory for secondary care unless presenting with acute medical emergencies (acute myocardial infarction, polytrauma, intracranial hemorrhage). Must present Ration Card and Aadhaar at the AJ Helpdesk.`
+    },
+    {
+      id: 'doc-aj-2',
+      hospital_id: 'hosp-2',
+      hospital_name: 'AJ Hospital & Research Centre',
+      document_name: 'Robotic Surgery & Comprehensive Oncology Guidelines.pdf',
+      document_type: 'Clinical Protocols',
+      version: '1.2',
+      file_url: 'https://medconnect.karavali.ai/docs/aj/robotic-surgery-oncology.pdf',
+      file_size: 3145728,
+      status: 'Indexed',
+      uploaded_by: 'Oncology Directorate - AJ Hospital',
+      page_count: 12,
+      content_text: `AJ Hospital & Research Centre - Advanced Surgical & Cancer Care Guidelines.
+Pages 1-5: Da Vinci Xi Robotic Surgical System. Robotic minimally invasive procedures for Urological cancers (prostatectomy, partial nephrectomy), Gastrointestinal malignancies, and Gynecological oncology.
+Pages 6-12: Multi-Disciplinary Oncology Board. All cancer patients undergo review by the Tumor Board consisting of Surgical Oncologists, Medical Oncologists, and Radiation Oncologists with TrueBeam Linear Accelerator radiotherapy.`
+    },
+    {
+      id: 'doc-fm-1',
+      hospital_id: 'hosp-3',
+      hospital_name: 'Father Muller Medical College Hospital',
+      document_name: 'Ayushman Bharat & Charitable Health Fund Protocols.pdf',
+      document_type: 'Ayushman Bharat / Govt Scheme',
+      version: '1.8',
+      file_url: 'https://medconnect.karavali.ai/docs/fathermuller/charitable-fund-protocols.pdf',
+      file_size: 1945600,
+      status: 'Indexed',
+      uploaded_by: 'Charitable Welfare Bureau - Father Muller',
+      page_count: 7,
+      content_text: `Father Muller Medical College Hospital, Kankanady, Mangaluru - Welfare & Government Schemes.
+Pages 1-3: Father Muller Charitable Concession. Needy patients without active insurance or BPL cards can apply for Father Muller Charitable Fund providing 30% to 75% fee waivers on bed charges, investigations, and OT fees.
+Pages 4-7: Ayushman Bharat Empanelled Packages. Full PM-JAY cashless benefits for Orthopedics (joint replacements), General Surgery, ENT micro-surgery, and Pediatric care with designated 120-bed scheme ward.`
+    },
+    {
+      id: 'doc-kasturba-1',
+      hospital_id: 'hosp-4',
+      hospital_name: 'Kasturba Hospital, Manipal',
+      document_name: 'Manipal Arogya Card & Ayushman Bharat Scheme.pdf',
+      document_type: 'Ayushman Bharat / Govt Scheme',
+      version: '4.1',
+      file_url: 'https://medconnect.karavali.ai/docs/kasturba/manipal-arogya-card-scheme.pdf',
+      file_size: 2621440,
+      status: 'Indexed',
+      uploaded_by: 'Community Health Directorate - Kasturba Manipal',
+      page_count: 10,
+      content_text: `Kasturba Hospital, Manipal - Community Health & Government Scheme Charter.
+Pages 1-4: Manipal Arogya Card (MAC) Benefits. 50% concession on Doctor Consultation fees, 25% discount on Outpatient Diagnostics (Lab, CT, MRI, Ultrasound), 20% discount on generic inpatient pharmacy, and 25% discount on general ward bed charges.
+Pages 5-10: Ayushman Bharat PM-JAY Super-Specialty Protocol. Empanelled for organ transplants (Kidney, Liver), Pediatric Cardiac Surgery, Cardiothoracic interventions, and Advanced Neuro-vascular interventions with 100% cashless execution.`
+    },
+    {
+      id: 'doc-yenepoya-1',
+      hospital_id: 'hosp-5',
+      hospital_name: 'Yenepoya Specialty Hospital',
+      document_name: 'Ayushman Bharat & Yenepoya Healthcare Scheme.pdf',
+      document_type: 'Ayushman Bharat / Govt Scheme',
+      version: '1.5',
+      file_url: 'https://medconnect.karavali.ai/docs/yenepoya/ayushman-bharat-policy.pdf',
+      file_size: 1740800,
+      status: 'Indexed',
+      uploaded_by: 'Medical Affairs - Yenepoya Hospital',
+      page_count: 6,
+      content_text: `Yenepoya Specialty Hospital, Deralakatte & Kodialbail, Mangaluru - Healthcare Scheme Charter.
+Pages 1-3: Yenepoya Healthcare Card & Ayushman PM-JAY. Free OPD consultations for rural cardholders. 100% cashless coverage under PM-JAY for high-risk obstetric surgeries, oncology, and general surgery.
+Pages 4-6: Dialysis & Nephrology Subsidies. Subsidized hemodialysis unit under PM-JAY with zero copay for BPL patients.`
+    },
+    {
+      id: 'doc-indiana-1',
+      hospital_id: 'hosp-6',
+      hospital_name: 'Indiana Hospital & Heart Institute',
+      document_name: 'Cardiac Emergency & Interventional Cardiology Package Guide.pdf',
+      document_type: 'Insurance Guidelines',
+      version: '2.0',
+      file_url: 'https://medconnect.karavali.ai/docs/indiana/cardiac-emergency-guide.pdf',
+      file_size: 1980000,
+      status: 'Indexed',
+      uploaded_by: 'Cardiac Care Registry - Indiana Hospital',
+      page_count: 6,
+      content_text: `Indiana Hospital & Heart Institute, Pumpwell Circle, Mangaluru - Cardiac Care Protocol.
+Pages 1-3: 24x7 Primary Angioplasty in Myocardial Infarction (PAMI). Emergency golden-hour heart attack management with dedicated Cath Lab activation in under 30 minutes.
+Pages 4-6: Health Insurance & Cashless Cardiology. Empanelled with all major private insurers (Star Health, HDFC ERGO, ICICI Lombard) and Arogya Karnataka / Ayushman Bharat for emergency coronary stenting and bypass surgery.`
+    },
+    {
+      id: 'doc-kshegde-1',
+      hospital_id: 'hosp-7',
+      hospital_name: 'KS Hegde Charitable Hospital',
+      document_name: 'Nitte Healthcare Community Subsidy Guidelines.pdf',
+      document_type: 'Ayushman Bharat / Govt Scheme',
+      version: '1.3',
+      file_url: 'https://medconnect.karavali.ai/docs/kshegde/community-subsidy-guidelines.pdf',
+      file_size: 1650000,
+      status: 'Indexed',
+      uploaded_by: 'Welfare Cell - KS Hegde Hospital',
+      page_count: 5,
+      content_text: `KS Hegde Charitable Hospital, Deralakatte, Mangaluru - Nitte University Health Mission.
+Pages 1-3: Free General Ward Admissions. Free bed and nursing care in general wards for BPL cardholders. Subsidized surgeries in Ophthalmology (Cataract), ENT, Orthopedics, and Obstetrics.
+Pages 4-5: PM-JAY Empanelment. Cashless treatments for approved packages under Government of Karnataka healthcare portal.`
+    },
+    {
+      id: 'doc-wenlock-1',
+      hospital_id: 'hosp-8',
+      hospital_name: 'Government District Wenlock Hospital',
+      document_name: 'Free Tertiary Healthcare & BPL Concession Master Charter.pdf',
+      document_type: 'Ayushman Bharat / Govt Scheme',
+      version: '5.0',
+      file_url: 'https://medconnect.karavali.ai/docs/wenlock/free-healthcare-charter.pdf',
+      file_size: 2100000,
+      status: 'Indexed',
+      uploaded_by: 'District Surgeon - Wenlock Hospital',
+      page_count: 9,
+      content_text: `Government District Wenlock Hospital, Hampankatta, Mangaluru - Public Healthcare Charter.
+Pages 1-4: 100% Free Public Hospital Services. Free OPD registration, free essential generic medications, free routine blood and radiology diagnostics, and free inpatient hospital stay for all citizens.
+Pages 5-9: Arogya Karnataka Referral Hub. Wenlock Hospital is the nodal referral center for Dakshina Kannada. Patients requiring tertiary super-specialty interventions not available in-house are issued referral authorizations to empanelled private hospitals (KMC, AJ Hospital, Father Muller) with 100% cashless funding.`
+    }
+  ];
+
+  for (const doc of SEED_HOSPITAL_DOCUMENTS) {
+    await sqliteDb.run(
+      `INSERT OR REPLACE INTO hospital_documents (id, hospital_id, hospital_name, document_name, document_type, version, file_url, file_size, status, uploaded_by, page_count, content_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [doc.id, doc.hospital_id, doc.hospital_name, doc.document_name, doc.document_type, doc.version, doc.file_url, doc.file_size, doc.status, doc.uploaded_by, doc.page_count, doc.content_text]
     );
   }
 }

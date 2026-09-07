@@ -49,6 +49,24 @@ export const initSocket = (httpServer) => {
       }
     });
 
+    // Join hospital room for hospital admin updates & patient healthcare info real-time sync
+    socket.on('join:hospital', (hospitalId) => {
+      if (hospitalId) {
+        const room = `hospital:${hospitalId}`;
+        socket.join(room);
+        console.log(`📡 Socket ${socket.id} joined hospital room: ${room}`);
+      }
+    });
+
+    // Leave hospital room
+    socket.on('leave:hospital', (hospitalId) => {
+      if (hospitalId) {
+        const room = `hospital:${hospitalId}`;
+        socket.leave(room);
+        console.log(`📡 Socket ${socket.id} left hospital room: ${room}`);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`❌ [Socket.IO] Client disconnected: ${socket.id}`);
     });
@@ -91,4 +109,53 @@ export const emitQueueUpdate = (doctorId, payload) => {
   // 5. Global fallback event for public queue displays
   io.emit('global:queue_changed', payload);
   console.log(`📢 [Socket.IO Event Emitted] queue:updated for doctor ${doctorId}:`, payload.status || payload.action);
+};
+
+/**
+ * Emit real-time document availability / changes strictly scoped to hospital
+ */
+export const emitHospitalDocumentUpdate = (hospitalId, payload) => {
+  if (!io || !hospitalId) return;
+
+  const room = `hospital:${hospitalId}`;
+  io.to(room).emit('hospital:document_updated', {
+    ...payload,
+    hospitalId,
+    timestamp: new Date().toISOString(),
+  });
+  console.log(`📢 [Socket.IO Event Emitted] hospital:document_updated to room ${room}:`, payload.action || 'updated');
+};
+
+/**
+ * Emit real-time doctor addition/update strictly scoped to hospital + public directory
+ */
+export const emitHospitalDoctorUpdate = (hospitalId, payload) => {
+  if (!io || !hospitalId) return;
+
+  const room = `hospital:${hospitalId}`;
+  io.to(room).emit('hospital:doctor_updated', {
+    ...payload,
+    hospitalId,
+    timestamp: new Date().toISOString(),
+  });
+  io.emit('global:doctors_updated', {
+    ...payload,
+    hospitalId,
+    timestamp: new Date().toISOString(),
+  });
+  console.log(`📢 [Socket.IO Event Emitted] hospital:doctor_updated for hospital ${hospitalId}:`, payload.action || 'updated');
+};
+
+/**
+ * Emit appointment changes to hospital management room
+ */
+export const emitHospitalAppointmentUpdate = (hospitalId, payload) => {
+  if (!io || !hospitalId) return;
+
+  const room = `hospital:${hospitalId}`;
+  io.to(room).emit('hospital:appointment_updated', {
+    ...payload,
+    hospitalId,
+    timestamp: new Date().toISOString(),
+  });
 };

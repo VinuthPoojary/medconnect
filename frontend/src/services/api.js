@@ -67,6 +67,52 @@ export const loginDoctorApi = async (identifier, password) => {
   }
 };
 
+export const loginHospitalApi = async (email, password) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/hospital/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, loginIdentifier: email, password }),
+    });
+
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Invalid hospital email or password.');
+      return data;
+    }
+    throw new Error('Hospital authentication service returned invalid response.');
+  } catch (err) {
+    if (err.name === 'TypeError' || err.message?.includes('fetch')) {
+      throw new Error('Unable to sign in. Please try again.');
+    }
+    throw err;
+  }
+};
+
+export const fetchHospitalProfileApi = async () => {
+  try {
+    const token = localStorage.getItem('medconnect_token');
+    const res = await fetch(`${API_BASE_URL}/hospital/auth/profile`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || 'Failed to load hospital profile');
+    }
+    const data = await res.json();
+    return data.hospital || null;
+  } catch (err) {
+    console.error('fetchHospitalProfileApi error:', err);
+    throw err;
+  }
+};
+
 export const registerApi = async (userData) => {
   const res = await fetch(`${API_BASE_URL}/auth/register`, {
     method: 'POST',
@@ -237,17 +283,6 @@ export const updateQueueStatusApi = async (appointmentId, status, notes = '') =>
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to update queue status');
-  return data;
-};
-
-export const addDoctorByHospitalApi = async (doctorData) => {
-  const res = await fetch(`${API_BASE_URL}/doctor/hospital/add-doctor`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-    body: JSON.stringify(doctorData),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to add doctor account');
   return data;
 };
 
@@ -566,5 +601,146 @@ export const updateAppointmentStatusApi = async (id, status) => {
   if (!res.ok) throw new Error(data.message || 'Failed to update appointment status');
   return data;
 };
+
+/* =========================================================================
+   HOSPITAL MANAGEMENT & DOCUMENT RAG API CALLS
+   ========================================================================= */
+
+export const fetchHospitalDashboardMetricsApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/dashboard-metrics`, {
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to load hospital metrics');
+  return data;
+};
+
+export const fetchHospitalDoctorsApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/doctors`, {
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to load hospital doctors');
+  return data.doctors || [];
+};
+
+export const addDoctorByHospitalApi = async (doctorData) => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/doctors`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(doctorData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to add doctor');
+  return data;
+};
+
+export const updateDoctorByHospitalApi = async (id, doctorData) => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/doctors/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(doctorData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to update doctor');
+  return data;
+};
+
+export const deleteDoctorByHospitalApi = async (id) => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/doctors/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to remove doctor');
+  return data;
+};
+
+export const fetchHospitalAppointmentsApi = async (params = {}) => {
+  const searchParams = new URLSearchParams(params).toString();
+  const url = `${API_BASE_URL}/hospitals/appointments${searchParams ? `?${searchParams}` : ''}`;
+  const res = await fetch(url, { headers: getAuthHeader() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to load hospital appointments');
+  return data.appointments || [];
+};
+
+export const fetchHospitalPatientsApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/patients`, {
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to load hospital patients');
+  return data.patients || [];
+};
+
+export const fetchHospitalDocumentsApi = async () => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/documents`, {
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to load hospital documents');
+  return data.documents || [];
+};
+
+export const uploadHospitalDocumentApi = async (docData) => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/documents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(docData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to upload document');
+  return data;
+};
+
+export const updateHospitalDocumentApi = async (id, docData) => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/documents/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(docData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to update document');
+  return data;
+};
+
+export const deleteHospitalDocumentApi = async (id) => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/documents/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeader(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to delete document');
+  return data;
+};
+
+export const fetchPublicHospitalDocumentsApi = async (hospitalId) => {
+  const res = await fetch(`${API_BASE_URL}/hospitals/${hospitalId}/documents`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to load public documents');
+  return data.documents || [];
+};
+
+export const queryHospitalRagApi = async (hospitalId, queryText, hospitalName) => {
+  const res = await fetch(`${API_BASE_URL}/ai/hospital-rag`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      hospitalId,
+      hospitalName,
+      query: queryText,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to query hospital RAG');
+  return data;
+};
+
+// Aliases for seamless imports
+export const fetchHospitalMetricsApi = fetchHospitalDashboardMetricsApi;
+export const createHospitalDoctorApi = addDoctorByHospitalApi;
+export const updateHospitalDoctorApi = updateDoctorByHospitalApi;
+export const deleteHospitalDoctorApi = deleteDoctorByHospitalApi;
 
 

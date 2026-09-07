@@ -34,3 +34,23 @@ export const joinAppointmentRoom = (appointmentId) => {
     socket.emit('join:appointment', appointmentId);
   }
 };
+
+export const joinHospitalRoom = (hospitalId) => {
+  if (hospitalId) {
+    socket.emit('join:hospital', hospitalId);
+  }
+};
+
+export const leaveHospitalRoom = (hospitalId) => {
+  if (hospitalId) {
+    socket.emit('leave:hospital', hospitalId);
+  }
+};
+
+export const onHospitalDocumentUpdated = (callback) => {
+  const handler = (data) => callback(data);
+  socket.on('hospital:document_updated', handler);
+  return () => {
+    socket.off('hospital:document_updated', handler);
+  };
+};

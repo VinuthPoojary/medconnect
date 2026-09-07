@@ -1,9 +1,12 @@
 import express from 'express';
-import { registerHospital, loginHospital } from '../controllers/authHospitalController.js';
+import { loginHospital, getHospitalProfile } from '../controllers/authHospitalController.js';
+import { requireHospitalAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/register', registerHospital);
+// Dedicated hospital authentication endpoints
 router.post('/login', loginHospital);
+router.get('/me', requireHospitalAuth, getHospitalProfile);
+router.get('/profile', requireHospitalAuth, getHospitalProfile);
 
 export default router;
