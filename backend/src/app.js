@@ -14,7 +14,6 @@ import notificationRoutes from './routes/notifications.js';
 import aiRoutes from './routes/ai.js';
 import analyticsRoutes from './routes/analytics.js';
 import schemeRoutes from './routes/schemes.js';
-import doctorDashboardRoutes from './routes/doctor.js';
 
 const app = express();
 
@@ -26,8 +25,10 @@ app.use('/api/hospital/auth', authHospitalRoutes);
 app.use('/api/auth/hospital', authHospitalRoutes);
 app.use('/api/auth/doctor', authDoctorRoutes);
 app.use('/api/auth', authRoutes);
+
+// Unified Doctor Route (Mounting single canonical doctor router)
 app.use('/api/doctors', doctorRoutes);
-app.use('/api/doctor', doctorDashboardRoutes);
+app.use('/api/doctor', doctorRoutes);
 
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/appointments', appointmentRoutes);

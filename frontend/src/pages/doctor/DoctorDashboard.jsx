@@ -242,6 +242,28 @@ export const DoctorDashboard = () => {
           </div>
         </div>
 
+        {/* Tab Navigation for Single Unified Route */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
+          {[
+            { id: 'queue', label: 'OPD Live Queue', icon: <Activity className="w-4 h-4" /> },
+            { id: 'appointments', label: 'My Appointments', icon: <Calendar className="w-4 h-4" /> },
+            { id: 'prescriptions', label: 'Digital Prescriptions', icon: <Pill className="w-4 h-4" /> },
+            { id: 'profile', label: 'Doctor Profile', icon: <User className="w-4 h-4" /> },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setCurrentTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                currentTab === tab.id
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+                  : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
 

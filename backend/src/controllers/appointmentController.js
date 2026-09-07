@@ -181,11 +181,23 @@ export const getLiveQueue = async (req, res) => {
         meeting_url as "meetingUrl",
         created_at as "createdAt"
       FROM appointments 
-      WHERE (doctor_id = $1 OR doctor_id = $2 OR $1 IS NULL OR $1 = '')
-        AND date = $3
+      WHERE (
+        doctor_id = $1 
+        OR doctor_id = $2 
+        OR doctor_id = $3
+        OR doctor_name = $4
+        OR $1 IS NULL OR $1 = ''
+      )
+        AND date = $5
         AND LOWER(status) != 'cancelled'
     `;
-    const params = [targetDocId || '', (targetDocId || '').replace('user-doc-', 'doc-'), cleanDate];
+    const params = [
+      targetDocId || '',
+      (targetDocId || '').replace('user-doc-', 'doc-'),
+      doctorRecord?.user_id || '',
+      doctorRecord?.name || doctorName || '',
+      cleanDate
+    ];
 
     if (timeSlot) {
       params.push(timeSlot);
@@ -495,20 +507,21 @@ export const createAppointment = async (req, res) => {
         date: cleanDate,
         timeSlot: cleanSlot,
         userId: userId,
-        appointmentId: aptId,
+        appointmentId: payload?.id,
         appointment: payload,
       });
     } catch (e) {
       console.warn('Socket emission error:', e.message);
     }
 
+    const finalQueueNum = payload?.queueNumber || 1;
     res.status(201).json({
       success: true,
       message: `Appointment booked successfully! Your Token Number is #${
-        queueNumber < 10 ? '0' + queueNumber : queueNumber
+        finalQueueNum < 10 ? '0' + finalQueueNum : finalQueueNum
       }`,
       appointment: payload,
-      queueNumber,
+      queueNumber: finalQueueNum,
     });
   } catch (error) {
     if (error.statusCode) {

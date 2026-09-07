@@ -69,12 +69,9 @@ export const Sidebar = () => {
 
   const doctorSections = [
     {
-      title: 'Doctor Workspace',
+      title: 'Doctor Portal',
       items: [
-        { view: 'doctor-dashboard', label: 'OPD Clinic Queue', icon: <Activity className="w-4 h-4 text-cyan-600" /> },
-        { view: 'doctor-appointments', label: 'My Appointments', icon: <Calendar className="w-4 h-4 text-brand-600" /> },
-        { view: 'doctor-prescriptions', label: 'Issue Prescriptions', icon: <Pill className="w-4 h-4 text-emerald-600" /> },
-        { view: 'doctor-profile', label: 'Doctor Profile', icon: <User className="w-4 h-4 text-slate-600" /> },
+        { view: 'doctor-dashboard', label: 'Doctor Dashboard', icon: <Stethoscope className="w-4 h-4 text-brand-600" /> },
       ]
     }
   ];

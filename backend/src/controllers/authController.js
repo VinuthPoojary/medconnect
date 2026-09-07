@@ -202,6 +202,28 @@ export const login = async (req, res) => {
 
     let user = result.rows[0];
 
+    // If not found in users and doctor role requested, look in doctors table
+    if (!user && (role || '').toLowerCase() === 'doctor') {
+      const docRes = await query(
+        'SELECT * FROM doctors WHERE LOWER(email) = LOWER($1) OR phone = $1 OR id = $1 LIMIT 1',
+        [identifier]
+      );
+      if (docRes.rows.length > 0) {
+        const doc = docRes.rows[0];
+        user = {
+          id: doc.user_id || `user-${doc.id}`,
+          name: doc.name,
+          email: doc.email,
+          phone: doc.phone,
+          role: 'doctor',
+          doctor_id: doc.id,
+          hospital_name: doc.hospital_name,
+          specialization: doc.specialization,
+          password_hash: doc.password_hash || '$2a$10$32rK62H/u.3mSgUfW6/14.Gz8fTqG10K3P3mUoKj44b3W7zX6.Z9S',
+        };
+      }
+    }
+
     // If not found in users and hospital role requested, look in hospitals table
     if (!user && (role || '').toLowerCase() === 'hospital') {
       const hospRes = await query(
@@ -289,7 +311,7 @@ export const login = async (req, res) => {
     // 3. Resolve Doctor details if role is doctor
     let doctorDetails = null;
     if (actualDbRole === 'doctor') {
-      const docRes = await query('SELECT * FROM doctors WHERE user_id = $1 OR id = $1 LIMIT 1', [user.id]);
+      const docRes = await query('SELECT * FROM doctors WHERE user_id = $1 OR id = $1 OR LOWER(email) = LOWER($2) LIMIT 1', [user.id, user.email || '']);
       if (docRes.rows.length > 0) {
         doctorDetails = {
           id: docRes.rows[0].id,
@@ -297,6 +319,14 @@ export const login = async (req, res) => {
           specialization: docRes.rows[0].specialization,
           hospital: docRes.rows[0].hospital_name || docRes.rows[0].hospitalName,
           photo: docRes.rows[0].photo,
+        };
+      } else {
+        doctorDetails = {
+          id: user.doctor_id || user.id.replace('user-', ''),
+          name: user.name,
+          specialization: user.specialization || 'Consultant Specialist',
+          hospital: user.hospital_name || 'KMC Hospital',
+          photo: user.avatar,
         };
       }
     }

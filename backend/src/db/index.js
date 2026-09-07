@@ -38,6 +38,28 @@ const SEED_USERS = [
     avatar: 'VS',
   },
   {
+    id: 'user-doc-meera',
+    name: 'Dr. Meera Rao',
+    email: 'meera@medconnect.com',
+    phone: '+91 98451 99001',
+    password_hash: '$2a$10$f3DkZ70z5P5gL5oBv3e5E.v35G8b6b0c2a1d3e5f7g9h1i3j5k',
+    role: 'doctor',
+    hospital_name: 'AJ Hospital & Research Centre',
+    specialization: 'Pediatrics',
+    avatar: 'MR',
+  },
+  {
+    id: 'user-doc-suma',
+    name: 'Dr. Suma Hegde',
+    email: 'suma.hegde@medconnect.com',
+    phone: '+91 98451 99002',
+    password_hash: '$2a$10$f3DkZ70z5P5gL5oBv3e5E.v35G8b6b0c2a1d3e5f7g9h1i3j5k',
+    role: 'doctor',
+    hospital_name: 'Father Muller Medical College Hospital',
+    specialization: 'Gynecologist',
+    avatar: 'SH',
+  },
+  {
     id: 'user-hosp-1',
     name: 'KMC Hospital Admin',
     email: 'hospital@medconnect.com',
@@ -2603,21 +2625,26 @@ export const query = async (text, params = []) => {
     }
   } else {
     try {
-      let sqliteSql = text.replace(/\$(\d+)/g, '?');
+      const orderedParams = [];
+      let sqliteSql = text.replace(/\$(\d+)/g, (match, num) => {
+        const paramIndex = parseInt(num, 10) - 1;
+        orderedParams.push(params[paramIndex]);
+        return '?';
+      });
       const isReturning = /RETURNING/i.test(sqliteSql);
 
-      let cleanSql = sqliteSql;
+      let cleanSql = sqliteSql.replace(/\bILIKE\b/gi, 'LIKE');
       if (isReturning) {
-        cleanSql = sqliteSql.replace(/\s+RETURNING\s+.*/is, '');
+        cleanSql = cleanSql.replace(/\s+RETURNING\s+.*/is, '');
       }
 
       let rows = [];
       const trimmedSql = cleanSql.trim().toUpperCase();
 
       if (trimmedSql.startsWith('SELECT')) {
-        rows = await sqliteDb.all(cleanSql, params);
+        rows = await sqliteDb.all(cleanSql, orderedParams);
       } else {
-        await sqliteDb.run(cleanSql, params);
+        await sqliteDb.run(cleanSql, orderedParams);
         rows = [];
       }
 

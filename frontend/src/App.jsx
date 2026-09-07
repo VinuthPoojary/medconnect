@@ -139,12 +139,6 @@ const MainLayout = () => {
         return <ProfilePage />;
 
       case 'doctor-dashboard':
-      case 'doctor-overview':
-      case 'doctor-appointments':
-      case 'doctor-patients':
-      case 'doctor-reports':
-      case 'doctor-prescriptions':
-      case 'doctor-profile':
         return <DoctorDashboard />;
 
       case 'hospital-dashboard':
