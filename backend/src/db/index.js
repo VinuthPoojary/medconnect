@@ -1855,6 +1855,24 @@ async function initPgSchema() {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS hospitals (
+      id VARCHAR(100) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      banner TEXT,
+      location VARCHAR(255) NOT NULL,
+      distance VARCHAR(50),
+      rating NUMERIC(3, 2) DEFAULT 4.8,
+      departments TEXT[],
+      doctors_count INT DEFAULT 100,
+      beds_available INT DEFAULT 25,
+      emergency_status VARCHAR(50) DEFAULT 'Available',
+      facilities TEXT[],
+      phone VARCHAR(50),
+      reviews_count INT DEFAULT 300,
+      approved BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
     ALTER TABLE users ADD COLUMN IF NOT EXISTS hospital_id VARCHAR(100);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS qualification VARCHAR(255);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS experience VARCHAR(50);
@@ -1865,7 +1883,6 @@ async function initPgSchema() {
     ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
     ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
     ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS login_enabled BOOLEAN DEFAULT TRUE;
-
 
     CREATE TABLE IF NOT EXISTS doctors (
       id VARCHAR(100) PRIMARY KEY,
@@ -1891,24 +1908,6 @@ async function initPgSchema() {
     ALTER TABLE doctors ADD COLUMN IF NOT EXISTS user_id VARCHAR(100);
     ALTER TABLE doctors DROP CONSTRAINT IF EXISTS doctors_user_id_key;
     ALTER TABLE doctors ADD CONSTRAINT doctors_user_id_key UNIQUE (user_id);
-
-    CREATE TABLE IF NOT EXISTS hospitals (
-      id VARCHAR(100) PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      banner TEXT,
-      location VARCHAR(255) NOT NULL,
-      distance VARCHAR(50),
-      rating NUMERIC(3, 2) DEFAULT 4.8,
-      departments TEXT[],
-      doctors_count INT DEFAULT 100,
-      beds_available INT DEFAULT 25,
-      emergency_status VARCHAR(50) DEFAULT 'Available',
-      facilities TEXT[],
-      phone VARCHAR(50),
-      reviews_count INT DEFAULT 300,
-      approved BOOLEAN DEFAULT TRUE,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
 
     CREATE TABLE IF NOT EXISTS appointments (
       id VARCHAR(100) PRIMARY KEY,
