@@ -9,10 +9,15 @@ async function migrateAllDoctorAccounts() {
     console.log('--- Step 1: Ensuring Database Schema & Constraints ---');
     try {
       await query(`
-        ALTER TABLE doctors 
-        ADD COLUMN IF NOT EXISTS user_id VARCHAR(100) REFERENCES users(id);
+        ALTER TABLE doctors ADD COLUMN IF NOT EXISTS user_id VARCHAR(100);
+        ALTER TABLE doctors ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+        ALTER TABLE doctors ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+        ALTER TABLE doctors ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+        ALTER TABLE doctors ADD COLUMN IF NOT EXISTS hospital_id VARCHAR(100);
+        ALTER TABLE doctors ADD COLUMN IF NOT EXISTS qualification VARCHAR(255);
+        ALTER TABLE doctors ADD COLUMN IF NOT EXISTS license_number VARCHAR(100);
       `);
-      console.log('   ✅ Column doctors.user_id verified.');
+      console.log('   ✅ Doctor columns verified.');
     } catch (e) {
       console.log('   ℹ️ Column check note:', e.message);
     }
